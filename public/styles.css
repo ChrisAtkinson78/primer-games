@@ -320,6 +320,13 @@ button {
   font-weight: 700;
 }
 
+.mission-modal__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
 .mission-modal__button {
   min-width: 180px;
 }
@@ -386,5 +393,13 @@ button {
 
   .mission-modal__input {
     font-size: 24px;
+  }
+
+  .mission-modal__actions {
+    justify-content: stretch;
+  }
+
+  .mission-modal__button {
+    flex: 1 1 180px;
   }
 }

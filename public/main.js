@@ -82,7 +82,10 @@ root.innerHTML = `
           autocomplete="off"
           spellcheck="false"
         />
-        <button id="missionConfirmButton" class="hud__button mission-modal__button" type="button">Confirm</button>
+        <div class="mission-modal__actions">
+          <button id="missionShowMeButton" class="hud__button mission-modal__button" type="button" hidden>Show me</button>
+          <button id="missionConfirmButton" class="hud__button mission-modal__button" type="button">Confirm</button>
+        </div>
       </section>
     </div>
   </div>
@@ -110,6 +113,9 @@ const createPlanningMissionQuestions = () => {
     const b = randomInt(1, 9);
     questions.push({
       answer: a + b,
+      op: '+',
+      a,
+      b,
       prompt: `Teleport briefing: ${a} people are already aboard the rescue ship, and ${b} more arrive by teleport. How many people are on the rescue ship now? (${a} + ${b})`,
     });
   }
@@ -119,6 +125,9 @@ const createPlanningMissionQuestions = () => {
     const b = randomInt(1, Math.min(9, a - 1));
     questions.push({
       answer: a - b,
+      op: '-',
+      a,
+      b,
       prompt: `Drone briefing: ${a} hazards block the route, and the drones clear ${b} of them. How many hazards are left? (${a} - ${b})`,
     });
   }
@@ -128,6 +137,9 @@ const createPlanningMissionQuestions = () => {
     const b = randomInt(2, 6);
     questions.push({
       answer: a * b,
+      op: '×',
+      a,
+      b,
       prompt: `Cargo briefing: send ${a} cargo waves with ${b} crates in each wave. How many crates are sent altogether? (${a} × ${b})`,
     });
   }
@@ -138,6 +150,9 @@ const createPlanningMissionQuestions = () => {
     const a = b * trips;
     questions.push({
       answer: trips,
+      op: '÷',
+      a,
+      b,
       prompt: `Shuttle briefing: ${a} people must travel, and each shuttle trip moves ${b} people. How many trips are needed? (${a} ÷ ${b})`,
     });
   }
@@ -152,24 +167,38 @@ const missionElements = {
   prompt: document.querySelector('#missionPrompt'),
   feedback: document.querySelector('#missionFeedback'),
   answer: document.querySelector('#missionAnswer'),
+  showMeButton: document.querySelector('#missionShowMeButton'),
   confirmButton: document.querySelector('#missionConfirmButton'),
 };
+const restartButton = document.querySelector('#restartButton');
 
 const missionState = {
   questions: [],
   index: 0,
   active: false,
   complete: false,
+  demoPlaying: false,
+};
+
+const setShowMeVisible = (visible) => {
+  missionElements.showMeButton.hidden = !visible;
 };
 
 const closePlanningMission = () => {
   missionState.active = false;
   missionState.complete = false;
+  missionState.demoPlaying = false;
   missionState.questions = [];
   missionState.index = 0;
   missionElements.modal.hidden = true;
   missionElements.answer.value = '';
+  missionElements.answer.disabled = false;
   missionElements.feedback.textContent = '';
+  missionElements.feedback.dataset.state = '';
+  missionElements.confirmButton.disabled = false;
+  missionElements.showMeButton.disabled = false;
+  restartButton.disabled = false;
+  setShowMeVisible(false);
 };
 
 const renderPlanningMissionQuestion = () => {
@@ -183,6 +212,9 @@ const renderPlanningMissionQuestion = () => {
   missionElements.answer.disabled = false;
   missionElements.answer.value = '';
   missionElements.confirmButton.textContent = 'Confirm';
+  missionElements.confirmButton.disabled = false;
+  missionElements.showMeButton.disabled = false;
+  setShowMeVisible(false);
   missionElements.answer.focus();
 };
 
@@ -194,6 +226,7 @@ const renderPlanningMissionComplete = () => {
   missionElements.feedback.textContent = 'Correct. Briefing complete.';
   missionElements.feedback.dataset.state = 'correct';
   missionElements.answer.hidden = true;
+  setShowMeVisible(false);
   missionElements.confirmButton.textContent = 'Close Briefing';
   missionElements.confirmButton.focus();
 };
@@ -203,12 +236,13 @@ const openPlanningMission = () => {
   missionState.index = 0;
   missionState.active = true;
   missionState.complete = false;
+  missionState.demoPlaying = false;
   missionElements.modal.hidden = false;
   renderPlanningMissionQuestion();
 };
 
 const submitPlanningMissionAnswer = () => {
-  if (!missionState.active) {
+  if (!missionState.active || missionState.demoPlaying) {
     return;
   }
 
@@ -223,6 +257,7 @@ const submitPlanningMissionAnswer = () => {
   if (!Number.isFinite(answer)) {
     missionElements.feedback.textContent = 'Try again.';
     missionElements.feedback.dataset.state = 'incorrect';
+    setShowMeVisible(false);
     missionElements.answer.focus();
     missionElements.answer.select();
     return;
@@ -231,6 +266,7 @@ const submitPlanningMissionAnswer = () => {
   if (answer !== question.answer) {
     missionElements.feedback.textContent = 'Try again.';
     missionElements.feedback.dataset.state = 'incorrect';
+    setShowMeVisible(true);
     missionElements.answer.focus();
     missionElements.answer.select();
     return;
@@ -238,6 +274,7 @@ const submitPlanningMissionAnswer = () => {
 
   missionElements.feedback.textContent = 'Correct.';
   missionElements.feedback.dataset.state = 'correct';
+  setShowMeVisible(false);
 
   if (missionState.index >= missionState.questions.length - 1) {
     renderPlanningMissionComplete();
@@ -298,7 +335,7 @@ const keyMap = {
 };
 
 window.addEventListener('keydown', (event) => {
-  if (missionState.active && !missionState.complete && event.code === 'Enter') {
+  if (missionState.active && !missionState.complete && !missionState.demoPlaying && event.code === 'Enter') {
     event.preventDefault();
     submitPlanningMissionAnswer();
     return;
@@ -405,7 +442,7 @@ document.querySelector('#nextRoundButton').addEventListener('click', () => {
   game.nextRound();
 });
 
-document.querySelector('#restartButton').addEventListener('click', () => {
+restartButton.addEventListener('click', () => {
   held.left = false;
   held.right = false;
   held.up = false;
@@ -417,6 +454,39 @@ document.querySelector('#restartButton').addEventListener('click', () => {
 
 missionElements.confirmButton.addEventListener('click', () => {
   submitPlanningMissionAnswer();
+});
+
+missionElements.showMeButton.addEventListener('click', async () => {
+  if (!missionState.active || missionState.complete || missionState.demoPlaying) {
+    return;
+  }
+
+  const question = missionState.questions[missionState.index];
+  missionState.demoPlaying = true;
+  missionElements.answer.disabled = true;
+  missionElements.confirmButton.disabled = true;
+  missionElements.showMeButton.disabled = true;
+  restartButton.disabled = true;
+  missionElements.modal.hidden = true;
+
+  try {
+    await game.runDemo(question);
+  } finally {
+    missionState.demoPlaying = false;
+
+    if (!missionState.active || missionState.complete || missionState.questions[missionState.index] !== question) {
+      restartButton.disabled = false;
+      return;
+    }
+
+    missionElements.modal.hidden = false;
+    missionElements.answer.disabled = false;
+    missionElements.confirmButton.disabled = false;
+    missionElements.showMeButton.disabled = false;
+    restartButton.disabled = false;
+    missionElements.answer.focus();
+    missionElements.answer.select();
+  }
 });
 
 missionElements.answer.addEventListener('keydown', (event) => {

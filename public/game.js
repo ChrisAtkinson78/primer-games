@@ -94,6 +94,9 @@ export class MathBlasterGame {
     this.explainedOperations = new Set();
     this.flashTimeouts = new Map();
     this.completionNotified = false;
+    this.controlsLocked = false;
+    this.collisionDisabled = false;
+    this.demoSession = null;
 
     this.resetLevel(0);
   }
@@ -117,17 +120,25 @@ export class MathBlasterGame {
     this.hazardPoofs = [];
     this.explainedOperations.clear();
     this.completionNotified = false;
+    this.controlsLocked = false;
+    this.collisionDisabled = false;
+    this.demoSession = null;
     this.hideHelperCaption();
     this.hideRoundRecap();
     this.resetLevel(0);
   }
 
   setMovement(nextMovement) {
+    if (this.controlsLocked) {
+      this.movement = { left: false, right: false, up: false, down: false };
+      return;
+    }
+
     this.movement = nextMovement;
   }
 
   fire() {
-    if (this.phase !== 'playing' || this.availableShots() <= 0) {
+    if (this.controlsLocked || this.phase !== 'playing' || this.availableShots() <= 0) {
       return;
     }
 
@@ -170,10 +181,12 @@ export class MathBlasterGame {
       this.phaseTimer += deltaSeconds;
       this.enemyShip.warp = clamp(this.phaseTimer / 1.4, 0, 1);
     }
+
+    this.updateDemo(deltaSeconds);
   }
 
   updatePlayer(deltaSeconds) {
-    if (this.phase !== 'playing') {
+    if (this.controlsLocked || this.phase !== 'playing') {
       return;
     }
 
@@ -202,7 +215,7 @@ export class MathBlasterGame {
   }
 
   updateEnemy(deltaSeconds) {
-    if (this.phase !== 'playing') {
+    if (this.phase !== 'playing' || this.demoSession) {
       return;
     }
 
@@ -226,7 +239,7 @@ export class MathBlasterGame {
     this.enemyShip.x = clamp(this.enemyShip.x, minX, maxX);
     this.enemyShip.y = clamp(this.enemyShip.y, minY, maxY);
 
-    if (this.shipsCollide()) {
+    if (!this.collisionDisabled && this.shipsCollide()) {
       this.handleCrash();
     }
   }
@@ -306,6 +319,16 @@ export class MathBlasterGame {
   finishRound() {
     this.resultValue = this.computeResultValue();
     this.finalMessage = `${this.operandA} ${operatorGlyph(this.currentLevel.op)} ${this.operandB} = ${this.resultValue}`;
+
+    if (this.demoSession) {
+      this.phase = 'result';
+      this.phaseTimer = 0;
+      this.enemyShip.warp = 0;
+      this.messageLabel.textContent = `${this.finalMessage}. Demo complete.`;
+      this.showRoundRecap();
+      this.updateHud();
+      return;
+    }
 
     if (this.levelIndex >= LEVELS.length - 1) {
       this.phase = 'complete';
@@ -411,25 +434,26 @@ export class MathBlasterGame {
   setupRoundState() {
     const { op, aMin, aMax, bMin, bMax } = this.currentLevel;
     const operands = this.generateOperands(op, aMin, aMax, bMin, bMax);
-    this.operandA = operands.a;
-    this.operandB = operands.b;
+    this.configureRoundState(op, operands.a, operands.b);
+  }
+
+  configureRoundState(op, operandA, operandB) {
+    this.operandA = operandA;
+    this.operandB = operandB;
     this.tripCount = 0;
 
     switch (op) {
       case '+':
-        this.initialPlayerNumber = this.operandA;
-        this.initialEnemyNumber = this.operandB;
+        this.initialPlayerNumber = operandA;
+        this.initialEnemyNumber = operandB;
         break;
       case '-':
-        this.initialPlayerNumber = this.operandB;
-        this.initialEnemyNumber = this.operandA;
+        this.initialPlayerNumber = operandB;
+        this.initialEnemyNumber = operandA;
         break;
       case '×':
-        this.initialPlayerNumber = this.operandA;
-        this.initialEnemyNumber = 0;
-        break;
       case '÷':
-        this.initialPlayerNumber = this.operandA;
+        this.initialPlayerNumber = operandA;
         this.initialEnemyNumber = 0;
         break;
       default:
@@ -440,7 +464,18 @@ export class MathBlasterGame {
 
     this.playerNumber = this.initialPlayerNumber;
     this.enemyNumber = this.initialEnemyNumber;
-    this.hazards = op === '-' ? this.createHazards(this.operandA) : [];
+    this.hazards = op === '-' ? this.createHazards(operandA) : [];
+  }
+
+  configureDemoRoundState(op, operandA, operandB) {
+    this.configureRoundState(op, operandA, operandB);
+
+    if (op === '+') {
+      this.initialPlayerNumber = operandB;
+      this.initialEnemyNumber = operandA;
+      this.playerNumber = operandB;
+      this.enemyNumber = operandA;
+    }
   }
 
   createHazards(count) {
@@ -562,7 +597,7 @@ export class MathBlasterGame {
   }
 
   updateHud() {
-    this.levelLabel.textContent = `${this.levelIndex + 1} / ${LEVELS.length}`;
+    this.levelLabel.textContent = this.demoSession ? 'Demo' : `${this.levelIndex + 1} / ${LEVELS.length}`;
     this.playerLabel.textContent = this.getPlayerStatusText();
     this.enemyLabel.textContent = this.getEnemyStatusText();
     this.problemTop.textContent = `${this.operandA}`;
@@ -575,6 +610,34 @@ export class MathBlasterGame {
     this.nextRoundButton.hidden = !showNextRound;
     this.nextRoundButton.disabled = this.phase === 'complete';
     this.completeLabel.hidden = this.phase !== 'complete';
+  }
+
+  updateDemo(deltaSeconds) {
+    if (!this.demoSession) {
+      return;
+    }
+
+    if (this.phase === 'playing') {
+      if (this.demoSession.startDelay > 0) {
+        this.demoSession.startDelay = Math.max(0, this.demoSession.startDelay - deltaSeconds);
+        return;
+      }
+
+      this.demoSession.shotCooldown = Math.max(0, this.demoSession.shotCooldown - deltaSeconds);
+      if (this.demoSession.pendingShots > 0 && this.bullets.length === 0 && this.demoSession.shotCooldown === 0) {
+        this.spawnDemoBullet();
+        this.demoSession.pendingShots -= 1;
+        this.demoSession.shotCooldown = this.demoSession.shotInterval;
+      }
+      return;
+    }
+
+    if (this.phase === 'result' || this.phase === 'complete') {
+      this.demoSession.restoreDelay = Math.max(0, this.demoSession.restoreDelay - deltaSeconds);
+      if (this.demoSession.restoreDelay === 0) {
+        this.restoreDemoState();
+      }
+    }
   }
 
   updateHelperCaption(deltaSeconds) {
@@ -709,6 +772,186 @@ export class MathBlasterGame {
       lifetime: POPUP_LIFETIME_SECONDS,
       scale,
     });
+  }
+
+  spawnDemoBullet() {
+    this.bullets.push({
+      x: this.playerShip.x + this.playerShip.width * 0.45,
+      y: this.playerShip.y,
+      progress: 0,
+      speed: 1.7,
+      radius: 7,
+    });
+    this.updateHud();
+  }
+
+  cloneItems(items) {
+    return items.map((item) => ({ ...item }));
+  }
+
+  createDemoSnapshot() {
+    return {
+      levelIndex: this.levelIndex,
+      currentLevel: { ...this.currentLevel },
+      operandA: this.operandA,
+      operandB: this.operandB,
+      initialPlayerNumber: this.initialPlayerNumber,
+      initialEnemyNumber: this.initialEnemyNumber,
+      playerNumber: this.playerNumber,
+      enemyNumber: this.enemyNumber,
+      tripCount: this.tripCount,
+      bullets: this.cloneItems(this.bullets),
+      phase: this.phase,
+      phaseTimer: this.phaseTimer,
+      resultValue: this.resultValue,
+      finalMessage: this.finalMessage,
+      playerShip: { ...this.playerShip },
+      enemyShip: { ...this.enemyShip },
+      helperCaptionTimer: this.helperCaptionTimer,
+      helperCaptionText: this.helperCaption.textContent,
+      helperCaptionHidden: this.helperCaption.hidden,
+      roundRecapText: this.roundRecap.textContent,
+      roundRecapHidden: this.roundRecap.hidden,
+      deltaPopups: this.cloneItems(this.deltaPopups),
+      hazards: this.cloneItems(this.hazards),
+      hazardPoofs: this.cloneItems(this.hazardPoofs),
+      explainedOperations: [...this.explainedOperations],
+      completionNotified: this.completionNotified,
+      movement: { ...this.movement },
+      messageText: this.messageLabel.textContent,
+    };
+  }
+
+  runDemo(question) {
+    if (this.demoSession) {
+      return Promise.resolve();
+    }
+
+    const { op, a, b } = question;
+    const snapshot = this.createDemoSnapshot();
+
+    this.demoSession = {
+      snapshot,
+      pendingShots: this.getDemoShotCount(op, a, b),
+      shotCooldown: 0,
+      shotInterval: op === '÷' ? 0.55 : 0.42,
+      startDelay: 0.4,
+      restoreDelay: 1.5,
+      resolve: null,
+    };
+
+    this.controlsLocked = true;
+    this.collisionDisabled = true;
+    this.movement = { left: false, right: false, up: false, down: false };
+    this.currentLevel = { ...this.currentLevel, op, label: 'Planning Mission Demo' };
+    this.configureDemoRoundState(op, a, b);
+    this.bullets = [];
+    this.phase = 'playing';
+    this.phaseTimer = 0;
+    this.resultValue = null;
+    this.finalMessage = '';
+    this.enemyShip.warp = 0;
+    this.helperCaptionTimer = 0;
+    this.deltaPopups = [];
+    this.hazardPoofs = [];
+    this.playerShip.x = this.width * 0.2;
+    this.playerShip.y = this.height * 0.78;
+    this.enemyShip.x = this.width * 0.74;
+    this.enemyShip.y = this.height * 0.3;
+    this.hideRoundRecap();
+    this.hideHelperCaption();
+    this.messageLabel.textContent = this.getDemoInstructionMessage(op, a, b);
+    this.updateHud();
+    this.lastTime = performance.now();
+
+    return new Promise((resolve) => {
+      this.demoSession.resolve = resolve;
+    });
+  }
+
+  getDemoShotCount(op, a, b) {
+    switch (op) {
+      case '+':
+        return b;
+      case '×':
+        return a;
+      case '-':
+        return b;
+      case '÷':
+        return a / b;
+      default:
+        return 0;
+    }
+  }
+
+  getDemoInstructionMessage(op, a, b) {
+    switch (op) {
+      case '+':
+        return `Planning Mission demo. Watch ${b} more people arrive by teleport so the rescue ship reaches ${a + b}.`;
+      case '-':
+        return `Planning Mission demo. Watch ${b} drones clear hazards until ${a - b} hazards remain.`;
+      case '×':
+        return `Planning Mission demo. Watch ${a} cargo waves add ${b} crates each for ${a * b} total.`;
+      case '÷':
+        return `Planning Mission demo. Watch shuttle trips move ${b} people at a time until all ${a} are rescued.`;
+      default:
+        return 'Planning Mission demo.';
+    }
+  }
+
+  restoreDemoState() {
+    if (!this.demoSession) {
+      return;
+    }
+
+    const { snapshot, resolve } = this.demoSession;
+    this.demoSession = null;
+    this.controlsLocked = false;
+    this.collisionDisabled = false;
+    this.levelIndex = snapshot.levelIndex;
+    this.currentLevel = { ...snapshot.currentLevel };
+    this.operandA = snapshot.operandA;
+    this.operandB = snapshot.operandB;
+    this.initialPlayerNumber = snapshot.initialPlayerNumber;
+    this.initialEnemyNumber = snapshot.initialEnemyNumber;
+    this.playerNumber = snapshot.playerNumber;
+    this.enemyNumber = snapshot.enemyNumber;
+    this.tripCount = snapshot.tripCount;
+    this.bullets = this.cloneItems(snapshot.bullets);
+    this.phase = snapshot.phase;
+    this.phaseTimer = snapshot.phaseTimer;
+    this.resultValue = snapshot.resultValue;
+    this.finalMessage = snapshot.finalMessage;
+    this.playerShip = { ...snapshot.playerShip };
+    this.enemyShip = { ...snapshot.enemyShip };
+    this.helperCaptionTimer = snapshot.helperCaptionTimer;
+    this.deltaPopups = this.cloneItems(snapshot.deltaPopups);
+    this.hazards = this.cloneItems(snapshot.hazards);
+    this.hazardPoofs = this.cloneItems(snapshot.hazardPoofs);
+    this.explainedOperations = new Set(snapshot.explainedOperations);
+    this.completionNotified = snapshot.completionNotified;
+    this.movement = { ...snapshot.movement };
+    this.messageLabel.textContent = snapshot.messageText;
+
+    if (snapshot.helperCaptionHidden) {
+      this.hideHelperCaption();
+    } else {
+      this.helperCaption.textContent = snapshot.helperCaptionText;
+      this.helperCaption.hidden = false;
+    }
+
+    if (snapshot.roundRecapHidden) {
+      this.hideRoundRecap();
+    } else {
+      this.roundRecap.textContent = snapshot.roundRecapText;
+      this.roundRecap.hidden = false;
+    }
+
+    this.updateHud();
+    this.lastTime = performance.now();
+    if (typeof resolve === 'function') {
+      resolve();
+    }
   }
 
   removeHazard() {
