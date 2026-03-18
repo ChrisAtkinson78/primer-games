@@ -29,6 +29,7 @@ const operatorGlyph = (op) => {
 const EQUATION_FLASH_MS = 300;
 const HELPER_CAPTION_SECONDS = 4.2;
 const POPUP_LIFETIME_SECONDS = 0.85;
+const HAZARD_POOF_LIFETIME_SECONDS = 0.45;
 
 const HELPER_CAPTIONS = {
   '+': 'Each teleport moves 1 from your ship to the rescue ship. That makes the rescue total grow by 1.',
@@ -87,6 +88,8 @@ export class MathBlasterGame {
     this.tripCount = 0;
     this.helperCaptionTimer = 0;
     this.deltaPopups = [];
+    this.hazards = [];
+    this.hazardPoofs = [];
     this.explainedOperations = new Set();
     this.flashTimeouts = new Map();
 
@@ -108,6 +111,8 @@ export class MathBlasterGame {
     this.tripCount = 0;
     this.helperCaptionTimer = 0;
     this.deltaPopups = [];
+    this.hazards = [];
+    this.hazardPoofs = [];
     this.explainedOperations.clear();
     this.hideHelperCaption();
     this.hideRoundRecap();
@@ -150,6 +155,7 @@ export class MathBlasterGame {
     this.updateEnemy(deltaSeconds);
     this.updateBullets(deltaSeconds);
     this.updateDeltaPopups(deltaSeconds);
+    this.updateHazardPoofs(deltaSeconds);
     this.updateHelperCaption(deltaSeconds);
 
     if (this.phase === 'crash') {
@@ -262,6 +268,7 @@ export class MathBlasterGame {
         if (this.playerNumber <= 0 || this.enemyNumber <= 0) return;
         this.playerNumber -= 1;
         this.enemyNumber -= 1;
+        this.removeHazard();
         hitResolved = true;
         break;
       case '×':
@@ -382,6 +389,7 @@ export class MathBlasterGame {
     this.enemyShip.warp = 0;
     this.helperCaptionTimer = 0;
     this.deltaPopups = [];
+    this.hazardPoofs = [];
     this.playerShip.x = this.width * 0.2;
     this.playerShip.y = this.height * 0.78;
     this.messageLabel.textContent = this.getInstructionMessage();
@@ -422,6 +430,37 @@ export class MathBlasterGame {
 
     this.playerNumber = this.initialPlayerNumber;
     this.enemyNumber = this.initialEnemyNumber;
+    this.hazards = op === '-' ? this.createHazards(this.operandA) : [];
+  }
+
+  createHazards(count) {
+    const hazards = [];
+    const columns = 5;
+    const spacingX = 30;
+    const spacingY = 28;
+    const totalRows = Math.ceil(count / columns);
+    const clusterWidth = Math.min(columns, count) * spacingX;
+    const clusterHeight = totalRows * spacingY;
+    const originX = this.width - 252;
+    const originY = 102;
+    const startX = originX + (160 - clusterWidth) * 0.5 + spacingX * 0.5;
+    const startY = originY + (110 - clusterHeight) * 0.5 + spacingY * 0.5;
+
+    for (let index = 0; index < count; index += 1) {
+      const column = index % columns;
+      const row = Math.floor(index / columns);
+      const jitterX = ((index * 17) % 7) - 3;
+      const jitterY = ((index * 11) % 7) - 3;
+      hazards.push({
+        x: startX + column * spacingX + jitterX,
+        y: startY + row * spacingY + jitterY,
+        radius: 8 + (index % 3),
+        rotation: ((index * 37) % 360) * (Math.PI / 180),
+        variant: index % 3,
+      });
+    }
+
+    return hazards;
   }
 
   generateOperands(op, aMin, aMax, bMin, bMax) {
@@ -546,6 +585,13 @@ export class MathBlasterGame {
     });
   }
 
+  updateHazardPoofs(deltaSeconds) {
+    this.hazardPoofs = this.hazardPoofs.filter((poof) => {
+      poof.age += deltaSeconds;
+      return poof.age < poof.lifetime;
+    });
+  }
+
   showOperationFeedback(op) {
     this.spawnDeltaPopups(op);
     this.flashEquationParts();
@@ -655,12 +701,28 @@ export class MathBlasterGame {
     });
   }
 
+  removeHazard() {
+    if (this.currentLevel.op !== '-' || this.hazards.length === 0) {
+      return;
+    }
+
+    const hazard = this.hazards.pop();
+    this.hazardPoofs.push({
+      x: hazard.x,
+      y: hazard.y,
+      age: 0,
+      lifetime: HAZARD_POOF_LIFETIME_SECONDS,
+      radius: hazard.radius + 8,
+    });
+  }
+
   render() {
     const ctx = this.ctx;
     ctx.clearRect(0, 0, this.width, this.height);
 
     this.drawBackground(ctx);
     this.drawArena(ctx);
+    this.drawHazards(ctx);
     this.drawPlayer(ctx);
     this.drawEnemy(ctx);
     this.drawBullets(ctx);
@@ -699,6 +761,80 @@ export class MathBlasterGame {
     ctx.setLineDash([8, 10]);
     ctx.strokeRect(28, 28, this.width - 56, this.height - 56);
     ctx.restore();
+  }
+
+  drawHazards(ctx) {
+    if (this.currentLevel.op !== '-') {
+      return;
+    }
+
+    ctx.save();
+    ctx.fillStyle = 'rgba(9, 19, 30, 0.28)';
+    ctx.strokeStyle = 'rgba(178, 214, 244, 0.14)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.roundRect(this.width - 266, 90, 188, 126, 24);
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+
+    for (const hazard of this.hazards) {
+      ctx.save();
+      ctx.translate(hazard.x, hazard.y);
+      ctx.rotate(hazard.rotation + this.lastTime * 0.00018 * (hazard.variant + 1));
+      ctx.fillStyle = hazard.variant === 0 ? '#7f8fa1' : '#8f7886';
+      ctx.strokeStyle = 'rgba(232, 244, 255, 0.2)';
+      ctx.lineWidth = 1.5;
+
+      ctx.beginPath();
+      for (let point = 0; point < 7; point += 1) {
+        const angle = (Math.PI * 2 * point) / 7;
+        const radius = hazard.radius + ((point + hazard.variant) % 2 === 0 ? 2.8 : -1.6);
+        const px = Math.cos(angle) * radius;
+        const py = Math.sin(angle) * radius;
+        if (point === 0) {
+          ctx.moveTo(px, py);
+        } else {
+          ctx.lineTo(px, py);
+        }
+      }
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = 'rgba(255, 214, 153, 0.3)';
+      ctx.beginPath();
+      ctx.arc(-hazard.radius * 0.2, -hazard.radius * 0.15, hazard.radius * 0.32, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    for (const poof of this.hazardPoofs) {
+      const progress = poof.age / poof.lifetime;
+      const alpha = 1 - progress;
+      const ringRadius = poof.radius * (0.45 + progress * 0.75);
+
+      ctx.save();
+      ctx.translate(poof.x, poof.y);
+      ctx.globalAlpha = alpha;
+      ctx.strokeStyle = '#ffe4ae';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(0, 0, ringRadius, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.fillStyle = '#fff7cf';
+      for (let spark = 0; spark < 6; spark += 1) {
+        const angle = (Math.PI * 2 * spark) / 6 + progress * 0.55;
+        const distance = poof.radius * (0.2 + progress * 0.8);
+        const x = Math.cos(angle) * distance;
+        const y = Math.sin(angle) * distance;
+        ctx.beginPath();
+        ctx.arc(x, y, 1.8 + (1 - progress), 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
   }
 
   drawPlayer(ctx) {
