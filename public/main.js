@@ -2,6 +2,133 @@ import { MathBlasterGame } from './game.js';
 
 const root = document.querySelector('#root');
 
+const DEFAULT_CUSTOM_OPS = ['+', '-', '×', '÷'];
+const DIGIT_LIMITS = {
+  1: 9,
+  2: 99,
+  3: 999,
+};
+const OPERATOR_NAMES = {
+  '+': 'Addition',
+  '-': 'Subtraction',
+  '×': 'Multiplication',
+  '÷': 'Division',
+};
+const OPERATOR_ALIASES = {
+  '+': '+',
+  '-': '-',
+  '×': '×',
+  '÷': '÷',
+  '*': '×',
+  x: '×',
+  X: '×',
+  '/': '÷',
+};
+
+const getRawQueryParam = (name) => {
+  const query = window.location.search.startsWith('?') ? window.location.search.slice(1) : window.location.search;
+  if (!query) {
+    return null;
+  }
+
+  for (const pair of query.split('&')) {
+    if (!pair) {
+      continue;
+    }
+
+    const [rawKey, rawValue = ''] = pair.split('=');
+    if (decodeURIComponent(rawKey) === name) {
+      return rawValue;
+    }
+  }
+
+  return null;
+};
+
+const parsePositiveInteger = (value) => {
+  const parsed = Number.parseInt(value ?? '', 10);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+};
+
+const getRoundBounds = (maxValue, roundIndex, rounds, minValue = 1) => {
+  const roundMax = Math.max(minValue, Math.floor((maxValue * (roundIndex + 1)) / rounds));
+  const previousMax = roundIndex === 0 ? minValue - 1 : Math.floor((maxValue * roundIndex) / rounds);
+  const roundMin = Math.max(minValue, Math.min(roundMax, previousMax + 1));
+  return { min: roundMin, max: roundMax };
+};
+
+const createCustomLevels = ({ ops, digits, rounds }) => {
+  const operandMax = DIGIT_LIMITS[digits];
+  const divisionQuotientCap = { 1: 5, 2: 12, 3: 20 }[digits];
+  const divisionDivisorCap = { 1: 4, 2: 12, 3: 25 }[digits];
+  const levels = [];
+
+  ops.forEach((op, opIndex) => {
+    for (let roundIndex = 0; roundIndex < rounds; roundIndex += 1) {
+      const levelNumber = roundIndex + 1;
+      const level = {
+        op,
+        label: `World ${opIndex + 1}-${levelNumber}: ${OPERATOR_NAMES[op]} ${levelNumber}`,
+      };
+
+      if (op === '÷') {
+        const dividendBounds = getRoundBounds(operandMax, roundIndex, rounds, 4);
+        const quotientBounds = getRoundBounds(divisionQuotientCap, roundIndex, rounds, 2);
+        level.aMin = dividendBounds.min;
+        level.aMax = dividendBounds.max;
+        level.bMin = 2;
+        level.bMax = Math.max(2, Math.min(divisionDivisorCap, dividendBounds.max));
+        level.dividendMin = dividendBounds.min;
+        level.dividendMax = dividendBounds.max;
+        level.divisorMin = 2;
+        level.divisorMax = level.bMax;
+        level.quotientMin = quotientBounds.min;
+        level.quotientMax = quotientBounds.max;
+      } else {
+        const bounds = getRoundBounds(operandMax, roundIndex, rounds, op === '×' ? 2 : 1);
+        level.aMin = bounds.min;
+        level.aMax = bounds.max;
+        level.bMin = op === '×' ? Math.max(2, bounds.min) : bounds.min;
+        level.bMax = bounds.max;
+      }
+
+      levels.push(level);
+    }
+  });
+
+  return levels;
+};
+
+const getConfiguredLevels = () => {
+  const searchParams = new URLSearchParams(window.location.search);
+  const rawOps = getRawQueryParam('ops');
+  const parsedOps = rawOps === null
+    ? null
+    : [...new Set(
+      decodeURIComponent(rawOps)
+        .split(',')
+        .map((value) => OPERATOR_ALIASES[value.trim()])
+        .filter(Boolean),
+    )];
+  const digitsParam = searchParams.get('digits');
+  const digits = digitsParam === null ? null : parsePositiveInteger(digitsParam);
+  const roundsParam = searchParams.get('rounds');
+  const rounds = roundsParam === null ? 3 : parsePositiveInteger(roundsParam) ?? 3;
+  const customMode = rawOps !== null || digits !== null || roundsParam !== null;
+
+  if (!customMode) {
+    return null;
+  }
+
+  const resolvedDigits = digits && DIGIT_LIMITS[digits] ? digits : 1;
+  const resolvedOps = parsedOps && parsedOps.length > 0 ? parsedOps : DEFAULT_CUSTOM_OPS;
+  return createCustomLevels({
+    ops: resolvedOps,
+    digits: resolvedDigits,
+    rounds,
+  });
+};
+
 root.innerHTML = `
   <div class="app-shell">
     <div class="hud">
@@ -302,6 +429,7 @@ const submitPlanningMissionAnswer = () => {
 
 const game = new MathBlasterGame({
   canvas: document.querySelector('#gameCanvas'),
+  levels: getConfiguredLevels(),
   levelLabel: document.querySelector('#levelLabel'),
   playerLabel: document.querySelector('#playerLabel'),
   enemyLabel: document.querySelector('#enemyLabel'),

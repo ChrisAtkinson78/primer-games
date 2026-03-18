@@ -1,4 +1,4 @@
-const LEVELS = [
+const DEFAULT_LEVELS = [
   { op: '+', aMin: 1, aMax: 5, bMin: 1, bMax: 5, label: 'World 1-1: Addition Warmup' },
   { op: '+', aMin: 3, aMax: 9, bMin: 2, bMax: 8, label: 'World 1-2: Addition Run' },
   { op: '+', aMin: 6, aMax: 12, bMin: 4, bMax: 10, label: 'World 1-3: Addition Finale' },
@@ -56,6 +56,7 @@ export class MathBlasterGame {
     this.nextRoundButton = elements.nextRoundButton;
     this.completeLabel = elements.completeLabel;
     this.onComplete = elements.onComplete;
+    this.levels = Array.isArray(elements.levels) && elements.levels.length > 0 ? elements.levels : DEFAULT_LEVELS;
 
     this.width = this.canvas.width;
     this.height = this.canvas.height;
@@ -79,7 +80,7 @@ export class MathBlasterGame {
     this.crashDuration = 0.9;
 
     this.levelIndex = 0;
-    this.currentLevel = LEVELS[0];
+    this.currentLevel = this.levels[0];
     this.bullets = [];
     this.phase = 'playing';
     this.phaseTimer = 0;
@@ -330,7 +331,7 @@ export class MathBlasterGame {
       return;
     }
 
-    if (this.levelIndex >= LEVELS.length - 1) {
+    if (this.levelIndex >= this.levels.length - 1) {
       this.phase = 'complete';
       this.phaseTimer = 1.4;
       this.enemyShip.warp = 1;
@@ -412,7 +413,7 @@ export class MathBlasterGame {
 
   resetLevel(nextLevelIndex) {
     this.levelIndex = nextLevelIndex;
-    this.currentLevel = LEVELS[this.levelIndex];
+    this.currentLevel = this.levels[this.levelIndex];
     this.setupRoundState();
     this.bullets = [];
     this.phase = 'playing';
@@ -516,10 +517,16 @@ export class MathBlasterGame {
     }
 
     if (op === '÷') {
+      const quotientMin = this.currentLevel.quotientMin ?? 1;
+      const quotientMax = this.currentLevel.quotientMax ?? Number.POSITIVE_INFINITY;
+      const dividendMin = this.currentLevel.dividendMin ?? aMin;
+      const dividendMax = this.currentLevel.dividendMax ?? aMax;
+      const divisorMin = this.currentLevel.divisorMin ?? bMin;
+      const divisorMax = this.currentLevel.divisorMax ?? bMax;
       const validPairs = [];
-      for (let b = bMin; b <= bMax; b += 1) {
-        for (let a = aMin; a <= aMax; a += 1) {
-          if (a % b === 0) {
+      for (let b = divisorMin; b <= divisorMax; b += 1) {
+        for (let a = dividendMin; a <= dividendMax; a += 1) {
+          if (a % b === 0 && a / b >= quotientMin && a / b <= quotientMax) {
             validPairs.push({ a, b });
           }
         }
@@ -597,7 +604,7 @@ export class MathBlasterGame {
   }
 
   updateHud() {
-    this.levelLabel.textContent = this.demoSession ? 'Demo' : `${this.levelIndex + 1} / ${LEVELS.length}`;
+    this.levelLabel.textContent = this.demoSession ? 'Demo' : `${this.levelIndex + 1} / ${this.levels.length}`;
     this.playerLabel.textContent = this.getPlayerStatusText();
     this.enemyLabel.textContent = this.getEnemyStatusText();
     this.problemTop.textContent = `${this.operandA}`;
