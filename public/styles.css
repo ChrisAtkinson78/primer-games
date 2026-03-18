@@ -230,6 +230,11 @@ button {
   padding: 20px;
 }
 
+/* Ensure the HTML `hidden` attribute actually hides the modal (author CSS overrides UA styles otherwise). */
+.mission-modal[hidden] {
+  display: none !important;
+}
+
 .mission-modal__backdrop {
   position: absolute;
   inset: 0;
