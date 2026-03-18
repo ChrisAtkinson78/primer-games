@@ -241,6 +241,17 @@ const openPlanningMission = () => {
   renderPlanningMissionQuestion();
 };
 
+// Admin shortcut: jump straight to the Planning Mission quiz.
+// Usage:
+// - Add `?mission=1` (or `?quiz=1`) to the URL
+// - Or press Ctrl+Shift+M (Cmd+Shift+M on macOS)
+const maybeAutoOpenPlanningMission = () => {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('mission') === '1' || params.get('quiz') === '1') {
+    openPlanningMission();
+  }
+};
+
 const submitPlanningMissionAnswer = () => {
   if (!missionState.active || missionState.demoPlaying) {
     return;
@@ -335,6 +346,13 @@ const keyMap = {
 };
 
 window.addEventListener('keydown', (event) => {
+  // Admin shortcut: open Planning Mission immediately.
+  if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.code === 'KeyM') {
+    event.preventDefault();
+    openPlanningMission();
+    return;
+  }
+
   if (missionState.active && !missionState.complete && !missionState.demoPlaying && event.code === 'Enter') {
     event.preventDefault();
     submitPlanningMissionAnswer();
@@ -499,3 +517,6 @@ missionElements.answer.addEventListener('keydown', (event) => {
 });
 
 game.start();
+
+// If URL has ?mission=1 or ?quiz=1, jump straight into the Planning Mission quiz.
+maybeAutoOpenPlanningMission();
