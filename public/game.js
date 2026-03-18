@@ -617,21 +617,6 @@ export class MathBlasterGame {
       return;
     }
 
-    if (this.phase === 'playing') {
-      if (this.demoSession.startDelay > 0) {
-        this.demoSession.startDelay = Math.max(0, this.demoSession.startDelay - deltaSeconds);
-        return;
-      }
-
-      this.demoSession.shotCooldown = Math.max(0, this.demoSession.shotCooldown - deltaSeconds);
-      if (this.demoSession.pendingShots > 0 && this.bullets.length === 0 && this.demoSession.shotCooldown === 0) {
-        this.spawnDemoBullet();
-        this.demoSession.pendingShots -= 1;
-        this.demoSession.shotCooldown = this.demoSession.shotInterval;
-      }
-      return;
-    }
-
     if (this.phase === 'result' || this.phase === 'complete') {
       this.demoSession.restoreDelay = Math.max(0, this.demoSession.restoreDelay - deltaSeconds);
       if (this.demoSession.restoreDelay === 0) {
@@ -774,17 +759,6 @@ export class MathBlasterGame {
     });
   }
 
-  spawnDemoBullet() {
-    this.bullets.push({
-      x: this.playerShip.x + this.playerShip.width * 0.45,
-      y: this.playerShip.y,
-      progress: 0,
-      speed: 1.7,
-      radius: 7,
-    });
-    this.updateHud();
-  }
-
   cloneItems(items) {
     return items.map((item) => ({ ...item }));
   }
@@ -832,15 +806,10 @@ export class MathBlasterGame {
 
     this.demoSession = {
       snapshot,
-      pendingShots: this.getDemoShotCount(op, a, b),
-      shotCooldown: 0,
-      shotInterval: op === '÷' ? 0.55 : 0.42,
-      startDelay: 0.4,
       restoreDelay: 1.5,
       resolve: null,
     };
 
-    this.controlsLocked = true;
     this.collisionDisabled = true;
     this.movement = { left: false, right: false, up: false, down: false };
     this.currentLevel = { ...this.currentLevel, op, label: 'Planning Mission Demo' };
@@ -869,31 +838,16 @@ export class MathBlasterGame {
     });
   }
 
-  getDemoShotCount(op, a, b) {
-    switch (op) {
-      case '+':
-        return b;
-      case '×':
-        return a;
-      case '-':
-        return b;
-      case '÷':
-        return a / b;
-      default:
-        return 0;
-    }
-  }
-
   getDemoInstructionMessage(op, a, b) {
     switch (op) {
       case '+':
-        return `Planning Mission demo. Watch ${b} more people arrive by teleport so the rescue ship reaches ${a + b}.`;
+        return `Planning Mission demo. Teleport ${b} more people so the rescue ship reaches ${a + b}.`;
       case '-':
-        return `Planning Mission demo. Watch ${b} drones clear hazards until ${a - b} hazards remain.`;
+        return `Planning Mission demo. Teleport ${b} drones to clear hazards until ${a - b} remain.`;
       case '×':
-        return `Planning Mission demo. Watch ${a} cargo waves add ${b} crates each for ${a * b} total.`;
+        return `Planning Mission demo. Teleport ${a} cargo waves of ${b} crates each for ${a * b} total.`;
       case '÷':
-        return `Planning Mission demo. Watch shuttle trips move ${b} people at a time until all ${a} are rescued.`;
+        return `Planning Mission demo. Make shuttle trips of ${b} people until all ${a} are rescued.`;
       default:
         return 'Planning Mission demo.';
     }
