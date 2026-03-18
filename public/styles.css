@@ -81,7 +81,20 @@ button {
 }
 
 .problem-panel__line {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  align-items: baseline;
+  column-gap: 10px;
   white-space: nowrap;
+}
+
+.problem-panel__operator {
+  text-align: center;
+  color: var(--muted);
+}
+
+.problem-panel__value {
+  text-align: right;
 }
 
 .hud__actions {

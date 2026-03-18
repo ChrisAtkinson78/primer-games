@@ -43,6 +43,8 @@ export class MathBlasterGame {
       height: 58,
       warp: 0,
     };
+    this.enemySpeed = 92;
+    this.crashDuration = 0.9;
 
     this.levelIndex = 0;
     this.bullets = [];
@@ -103,9 +105,15 @@ export class MathBlasterGame {
 
   update(deltaSeconds) {
     this.updatePlayer(deltaSeconds);
+    this.updateEnemy(deltaSeconds);
     this.updateBullets(deltaSeconds);
 
-    if (this.phase === 'result' || this.phase === 'complete') {
+    if (this.phase === 'crash') {
+      this.phaseTimer += deltaSeconds;
+      if (this.phaseTimer >= this.crashDuration) {
+        this.resetLevel(this.levelIndex);
+      }
+    } else if (this.phase === 'result' || this.phase === 'complete') {
       this.phaseTimer += deltaSeconds;
       this.enemyShip.warp = clamp(this.phaseTimer / 1.4, 0, 1);
     }
@@ -138,6 +146,36 @@ export class MathBlasterGame {
     const maxY = this.height - 54 - this.playerShip.height * 0.5;
     this.playerShip.x = clamp(this.playerShip.x, minX, maxX);
     this.playerShip.y = clamp(this.playerShip.y, minY, maxY);
+  }
+
+  updateEnemy(deltaSeconds) {
+    if (this.phase !== 'playing') {
+      return;
+    }
+
+    const targetX = this.playerShip.x + this.playerShip.width * 0.5 - this.enemyShip.width * 0.5;
+    const targetY = this.playerShip.y;
+    const deltaX = targetX - this.enemyShip.x;
+    const deltaY = targetY - this.enemyShip.y;
+    const distance = Math.hypot(deltaX, deltaY);
+
+    if (distance > 1) {
+      const maxStep = this.enemySpeed * deltaSeconds;
+      const stepScale = Math.min(1, maxStep / distance);
+      this.enemyShip.x += deltaX * stepScale;
+      this.enemyShip.y += deltaY * stepScale;
+    }
+
+    const minX = this.width * 0.48;
+    const maxX = this.width - this.enemyShip.width - 40;
+    const minY = 54 + this.enemyShip.height * 0.5;
+    const maxY = this.height - 54 - this.enemyShip.height * 0.5;
+    this.enemyShip.x = clamp(this.enemyShip.x, minX, maxX);
+    this.enemyShip.y = clamp(this.enemyShip.y, minY, maxY);
+
+    if (this.shipsCollide()) {
+      this.handleCrash();
+    }
   }
 
   updateBullets(deltaSeconds) {
@@ -180,6 +218,40 @@ export class MathBlasterGame {
     }
   }
 
+  shipsCollide() {
+    const playerBounds = {
+      left: this.playerShip.x + 6,
+      right: this.playerShip.x + this.playerShip.width - 8,
+      top: this.playerShip.y - this.playerShip.height * 0.42,
+      bottom: this.playerShip.y + this.playerShip.height * 0.42,
+    };
+    const enemyBounds = {
+      left: this.enemyShip.x,
+      right: this.enemyShip.x + this.enemyShip.width,
+      top: this.enemyShip.y - this.enemyShip.height * 0.5,
+      bottom: this.enemyShip.y + this.enemyShip.height * 0.5,
+    };
+
+    return !(
+      playerBounds.right < enemyBounds.left ||
+      playerBounds.left > enemyBounds.right ||
+      playerBounds.bottom < enemyBounds.top ||
+      playerBounds.top > enemyBounds.bottom
+    );
+  }
+
+  handleCrash() {
+    if (this.phase !== 'playing') {
+      return;
+    }
+
+    this.phase = 'crash';
+    this.phaseTimer = 0;
+    this.bullets = [];
+    this.messageLabel.textContent = 'Crash! Resetting this level...';
+    this.updateHud();
+  }
+
   nextRound() {
     if (this.phase !== 'result') {
       return;
@@ -212,8 +284,8 @@ export class MathBlasterGame {
     this.playerLabel.textContent = `${this.playerNumber} ship | ${this.playerNumber - this.bullets.length} ready`;
     this.enemyLabel.textContent = `${this.enemyNumber}`;
     this.problemTop.textContent = `${this.initialPlayerNumber}`;
-    this.problemMiddle.textContent = `+ ${this.initialEnemyNumber}`;
-    this.problemBottom.textContent = this.resultValue === null ? '= ?' : `= ${this.resultValue}`;
+    this.problemMiddle.textContent = `${this.initialEnemyNumber}`;
+    this.problemBottom.textContent = this.resultValue === null ? '?' : `${this.resultValue}`;
 
     const showNextRound = this.phase === 'result' || this.phase === 'complete';
     this.nextRoundButton.hidden = !showNextRound;
@@ -233,6 +305,8 @@ export class MathBlasterGame {
 
     if (this.phase === 'result' || this.phase === 'complete') {
       this.drawResultOverlay(ctx);
+    } else if (this.phase === 'crash') {
+      this.drawCrashOverlay(ctx);
     }
   }
 
@@ -385,6 +459,20 @@ export class MathBlasterGame {
       ctx.font = '600 22px Arial, sans-serif';
       ctx.fillText('Press Restart to play again.', this.width / 2, this.height * 0.62);
     }
+    ctx.restore();
+  }
+
+  drawCrashOverlay(ctx) {
+    ctx.save();
+    ctx.fillStyle = 'rgba(6, 10, 18, 0.26)';
+    ctx.fillRect(0, 0, this.width, this.height);
+    ctx.fillStyle = '#ffe5cf';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = '700 34px Arial, sans-serif';
+    ctx.fillText('Crash!', this.width / 2, this.height * 0.42);
+    ctx.font = '600 22px Arial, sans-serif';
+    ctx.fillText('Resetting level...', this.width / 2, this.height * 0.52);
     ctx.restore();
   }
 }

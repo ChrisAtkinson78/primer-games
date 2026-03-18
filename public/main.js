@@ -8,9 +8,18 @@ root.innerHTML = `
       <div class="hud__group hud__group--problem">
         <div class="hud__label">Problem</div>
         <div class="problem-panel" aria-live="polite">
-          <div id="problemTop" class="problem-panel__line">0</div>
-          <div id="problemMiddle" class="problem-panel__line">+ 0</div>
-          <div id="problemBottom" class="problem-panel__line">= ?</div>
+          <div class="problem-panel__line">
+            <span class="problem-panel__operator" aria-hidden="true"></span>
+            <span id="problemTop" class="problem-panel__value">0</span>
+          </div>
+          <div class="problem-panel__line">
+            <span class="problem-panel__operator" aria-hidden="true">+</span>
+            <span id="problemMiddle" class="problem-panel__value">0</span>
+          </div>
+          <div class="problem-panel__line">
+            <span class="problem-panel__operator" aria-hidden="true">=</span>
+            <span id="problemBottom" class="problem-panel__value">?</span>
+          </div>
         </div>
       </div>
       <div class="hud__group">
@@ -141,6 +150,48 @@ bindHoldButton(document.querySelector('#leftButton'), 'left');
 bindHoldButton(document.querySelector('#rightButton'), 'right');
 bindHoldButton(document.querySelector('#upButton'), 'up');
 bindHoldButton(document.querySelector('#downButton'), 'down');
+
+const canvas = document.querySelector('#gameCanvas');
+let canvasPointer = null;
+
+canvas.addEventListener('pointerdown', (event) => {
+  canvasPointer = {
+    id: event.pointerId,
+    x: event.clientX,
+    y: event.clientY,
+  };
+});
+
+canvas.addEventListener('pointerup', (event) => {
+  if (!canvasPointer || canvasPointer.id !== event.pointerId) {
+    return;
+  }
+
+  const movedX = event.clientX - canvasPointer.x;
+  const movedY = event.clientY - canvasPointer.y;
+  const movedDistance = Math.hypot(movedX, movedY);
+  canvasPointer = null;
+
+  if (movedDistance <= 10) {
+    game.fire();
+  }
+});
+
+canvas.addEventListener('pointercancel', () => {
+  canvasPointer = null;
+});
+
+window.addEventListener('pointerup', (event) => {
+  if (canvasPointer && canvasPointer.id === event.pointerId) {
+    canvasPointer = null;
+  }
+});
+
+window.addEventListener('pointercancel', (event) => {
+  if (canvasPointer && canvasPointer.id === event.pointerId) {
+    canvasPointer = null;
+  }
+});
 
 document.querySelector('#fireButton').addEventListener('click', () => {
   game.fire();
