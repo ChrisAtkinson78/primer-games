@@ -11,6 +11,8 @@ const randomInt = (min, max) => {
   return min + Math.floor(Math.random() * span);
 };
 
+const lerp = (start, end, amount) => start + (end - start) * amount;
+
 export class MathBlasterGame {
   constructor(elements) {
     this.canvas = elements.canvas;
@@ -207,7 +209,7 @@ export class MathBlasterGame {
         this.phase = 'complete';
         this.phaseTimer = 1.4;
         this.enemyShip.warp = 1;
-        this.messageLabel.textContent = `All levels complete. Final sum: ${this.finalMessage}`;
+        this.messageLabel.textContent = `All rescues complete. Final sum: ${this.finalMessage}`;
       } else {
         this.phase = 'result';
         this.phaseTimer = 0;
@@ -248,7 +250,7 @@ export class MathBlasterGame {
     this.phase = 'crash';
     this.phaseTimer = 0;
     this.bullets = [];
-    this.messageLabel.textContent = 'Crash! Resetting this level...';
+    this.messageLabel.textContent = 'Rescue ship collision. Resetting this level...';
     this.updateHud();
   }
 
@@ -275,13 +277,13 @@ export class MathBlasterGame {
     this.enemyShip.warp = 0;
     this.playerShip.x = this.width * 0.2;
     this.playerShip.y = this.height * 0.78;
-    this.messageLabel.textContent = `${config.label}. Fire ${this.playerNumber} shots to add onto the enemy.`;
+    this.messageLabel.textContent = `${config.label}. Teleport ${this.playerNumber} people to the rescue ship.`;
     this.updateHud();
   }
 
   updateHud() {
     this.levelLabel.textContent = `${this.levelIndex + 1} / ${LEVELS.length}`;
-    this.playerLabel.textContent = `${this.playerNumber} ship | ${this.playerNumber - this.bullets.length} ready`;
+    this.playerLabel.textContent = `${this.playerNumber} aboard | ${this.playerNumber - this.bullets.length} teleports ready`;
     this.enemyLabel.textContent = `${this.enemyNumber}`;
     this.problemTop.textContent = `${this.initialPlayerNumber}`;
     this.problemMiddle.textContent = `${this.initialEnemyNumber}`;
@@ -340,9 +342,46 @@ export class MathBlasterGame {
 
   drawPlayer(ctx) {
     const ship = this.playerShip;
+    const damageRatio = this.initialPlayerNumber > 0 ? 1 - this.playerNumber / this.initialPlayerNumber : 0;
+    const smokeCount = 3 + Math.round(damageRatio * 4);
+    const flameCount = damageRatio <= 0 ? 0 : 1 + Math.floor(damageRatio * 2);
 
     ctx.save();
     ctx.translate(ship.x, ship.y);
+
+    for (let i = 0; i < smokeCount; i += 1) {
+      const offset = (this.lastTime * 0.0018 + i * 0.27) % 1;
+      const drift = Math.sin(this.lastTime * 0.002 + i * 1.9) * (4 + damageRatio * 8);
+      const radius = lerp(7, 15, offset) + damageRatio * 4;
+      const alpha = lerp(0.18, 0.04, offset) + damageRatio * 0.05;
+      const smokeX = ship.width * (0.14 + (i % 2) * 0.08) - offset * 12 + drift;
+      const smokeY = -ship.height * 0.06 - offset * (20 + damageRatio * 18) + (i % 2) * 5;
+      ctx.fillStyle = `rgba(168, 181, 189, ${alpha.toFixed(3)})`;
+      ctx.beginPath();
+      ctx.arc(smokeX, smokeY, radius, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    if (flameCount > 0) {
+      for (let i = 0; i < flameCount; i += 1) {
+        const flicker = 0.7 + 0.3 * Math.sin(this.lastTime * 0.02 + i * 2.1);
+        const flameHeight = lerp(7, 14, damageRatio) * flicker;
+        const baseX = ship.width * (0.08 + i * 0.07);
+        const baseY = ship.height * (0.04 + i * 0.03);
+
+        ctx.fillStyle = `rgba(255, 157, 63, ${(0.48 + damageRatio * 0.2).toFixed(3)})`;
+        ctx.beginPath();
+        ctx.moveTo(baseX - 5, baseY);
+        ctx.lineTo(baseX + 2, baseY - flameHeight);
+        ctx.lineTo(baseX + 8, baseY + 1);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.fillStyle = `rgba(255, 224, 128, ${(0.42 + damageRatio * 0.18).toFixed(3)})`;
+        ctx.fillRect(baseX - 1, baseY - flameHeight * 0.65, 4, flameHeight * 0.62);
+      }
+    }
+
     ctx.fillStyle = '#66d6ff';
     ctx.beginPath();
     ctx.moveTo(0, 0);
@@ -354,6 +393,9 @@ export class MathBlasterGame {
 
     ctx.fillStyle = '#baf4ff';
     ctx.fillRect(ship.width * 0.16, -10, ship.width * 0.22, 20);
+
+    ctx.fillStyle = 'rgba(27, 56, 74, 0.55)';
+    ctx.fillRect(ship.width * 0.08, -6, ship.width * 0.14, 12);
     ctx.restore();
 
     this.drawShipNumber(ctx, ship.x + ship.width * 0.32, ship.y + 4, this.playerNumber, '#06131f', '#f6fbff');
@@ -470,9 +512,9 @@ export class MathBlasterGame {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.font = '700 34px Arial, sans-serif';
-    ctx.fillText('Crash!', this.width / 2, this.height * 0.42);
+    ctx.fillText('Collision!', this.width / 2, this.height * 0.42);
     ctx.font = '600 22px Arial, sans-serif';
-    ctx.fillText('Resetting level...', this.width / 2, this.height * 0.52);
+    ctx.fillText('Rescue route lost. Resetting level...', this.width / 2, this.height * 0.52);
     ctx.restore();
   }
 }

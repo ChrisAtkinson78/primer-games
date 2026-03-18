@@ -27,16 +27,16 @@ root.innerHTML = `
         <div id="levelLabel" class="hud__value">1 / 3</div>
       </div>
       <div class="hud__group">
-        <div class="hud__label">Player Bullets</div>
+        <div class="hud__label">Teleports Ready</div>
         <div id="playerLabel" class="hud__value">0</div>
       </div>
       <div class="hud__group">
-        <div class="hud__label">Enemy Number</div>
+        <div class="hud__label">Rescue Ship</div>
         <div id="enemyLabel" class="hud__value">0</div>
       </div>
       <div class="hud__group hud__group--wide">
         <div class="hud__label">Addition Result</div>
-        <div id="messageLabel" class="hud__value">Press fire to transfer your number.</div>
+        <div id="messageLabel" class="hud__value">Press Teleport to send people to safety.</div>
       </div>
       <div class="hud__actions">
         <button id="nextRoundButton" class="hud__button" type="button" hidden>Next Round</button>
@@ -51,7 +51,7 @@ root.innerHTML = `
 
     <div class="controls" aria-label="Touch controls">
       <button id="upButton" class="control-button" type="button">Move Up</button>
-      <button id="fireButton" class="control-button control-button--accent controls__fire" type="button">Fire</button>
+      <button id="fireButton" class="control-button control-button--accent controls__fire" type="button">Teleport</button>
       <button id="leftButton" class="control-button" type="button">Move Left</button>
       <button id="rightButton" class="control-button" type="button">Move Right</button>
       <button id="downButton" class="control-button" type="button">Move Down</button>
