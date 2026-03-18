@@ -375,7 +375,7 @@ const renderPlanningMissionQuestion = () => {
 const renderPlanningMissionComplete = () => {
   missionState.complete = true;
   missionElements.title.textContent = 'Mission Complete';
-  missionElements.progress.textContent = 'All 12 questions solved';
+  missionElements.progress.textContent = `All ${missionState.questions.length} questions solved`;
   missionElements.prompt.textContent = 'The Planning Mission is ready. Every rescue route, drone sweep, cargo wave, and shuttle trip is confirmed.';
   missionElements.feedback.textContent = 'Correct. Briefing complete.';
   missionElements.feedback.dataset.state = 'correct';
