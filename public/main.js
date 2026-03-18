@@ -5,6 +5,14 @@ const root = document.querySelector('#root');
 root.innerHTML = `
   <div class="app-shell">
     <div class="hud">
+      <div class="hud__group hud__group--problem">
+        <div class="hud__label">Problem</div>
+        <div class="problem-panel" aria-live="polite">
+          <div id="problemTop" class="problem-panel__line">0</div>
+          <div id="problemMiddle" class="problem-panel__line">+ 0</div>
+          <div id="problemBottom" class="problem-panel__line">= ?</div>
+        </div>
+      </div>
       <div class="hud__group">
         <div class="hud__label">Level</div>
         <div id="levelLabel" class="hud__value">1 / 3</div>
@@ -21,6 +29,10 @@ root.innerHTML = `
         <div class="hud__label">Addition Result</div>
         <div id="messageLabel" class="hud__value">Press fire to transfer your number.</div>
       </div>
+      <div class="hud__actions">
+        <button id="nextRoundButton" class="hud__button" type="button" hidden>Next Round</button>
+        <div id="completeLabel" class="hud__complete" hidden>Complete</div>
+      </div>
       <button id="restartButton" class="hud__button" type="button">Restart</button>
     </div>
 
@@ -29,9 +41,11 @@ root.innerHTML = `
     </div>
 
     <div class="controls" aria-label="Touch controls">
+      <button id="upButton" class="control-button" type="button">Move Up</button>
+      <button id="fireButton" class="control-button control-button--accent controls__fire" type="button">Fire</button>
       <button id="leftButton" class="control-button" type="button">Move Left</button>
-      <button id="fireButton" class="control-button control-button--accent" type="button">Fire</button>
       <button id="rightButton" class="control-button" type="button">Move Right</button>
+      <button id="downButton" class="control-button" type="button">Move Down</button>
     </div>
   </div>
 `;
@@ -42,25 +56,38 @@ const game = new MathBlasterGame({
   playerLabel: document.querySelector('#playerLabel'),
   enemyLabel: document.querySelector('#enemyLabel'),
   messageLabel: document.querySelector('#messageLabel'),
+  problemTop: document.querySelector('#problemTop'),
+  problemMiddle: document.querySelector('#problemMiddle'),
+  problemBottom: document.querySelector('#problemBottom'),
+  nextRoundButton: document.querySelector('#nextRoundButton'),
+  completeLabel: document.querySelector('#completeLabel'),
 });
 
 const held = {
   left: false,
   right: false,
+  up: false,
+  down: false,
 };
 
 const syncMovement = () => {
   game.setMovement({
     left: held.left,
     right: held.right,
+    up: held.up,
+    down: held.down,
   });
 };
 
 const keyMap = {
   ArrowLeft: 'left',
   KeyA: 'left',
+  ArrowUp: 'up',
+  KeyW: 'up',
   ArrowRight: 'right',
   KeyD: 'right',
+  ArrowDown: 'down',
+  KeyS: 'down',
 };
 
 window.addEventListener('keydown', (event) => {
@@ -112,14 +139,22 @@ const bindHoldButton = (element, direction) => {
 
 bindHoldButton(document.querySelector('#leftButton'), 'left');
 bindHoldButton(document.querySelector('#rightButton'), 'right');
+bindHoldButton(document.querySelector('#upButton'), 'up');
+bindHoldButton(document.querySelector('#downButton'), 'down');
 
 document.querySelector('#fireButton').addEventListener('click', () => {
   game.fire();
 });
 
+document.querySelector('#nextRoundButton').addEventListener('click', () => {
+  game.nextRound();
+});
+
 document.querySelector('#restartButton').addEventListener('click', () => {
   held.left = false;
   held.right = false;
+  held.up = false;
+  held.down = false;
   syncMovement();
   game.restart();
 });

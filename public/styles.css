@@ -36,7 +36,7 @@ button {
 
 .hud {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
+  grid-template-columns: minmax(170px, 0.95fr) repeat(3, minmax(0, 1fr)) minmax(180px, 1.2fr) auto auto;
   gap: 12px;
   align-items: stretch;
   margin-bottom: 14px;
@@ -54,6 +54,10 @@ button {
   min-width: 0;
 }
 
+.hud__group--problem {
+  align-self: start;
+}
+
 .hud__label {
   margin-bottom: 6px;
   font-size: 12px;
@@ -65,6 +69,40 @@ button {
 .hud__value {
   font-size: 22px;
   font-weight: 700;
+}
+
+.problem-panel {
+  display: grid;
+  gap: 6px;
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.problem-panel__line {
+  white-space: nowrap;
+}
+
+.hud__actions {
+  display: grid;
+  gap: 8px;
+  align-content: stretch;
+}
+
+.hud__complete {
+  display: grid;
+  place-items: center;
+  min-height: 48px;
+  padding: 8px 14px;
+  border: 1px solid rgba(255, 209, 155, 0.3);
+  border-radius: 18px;
+  background: rgba(91, 50, 17, 0.52);
+  color: #ffe6c8;
+  font-size: 15px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
 }
 
 .hud__button,
@@ -80,7 +118,15 @@ button {
 .hud__button {
   padding: 0 20px;
   min-width: 110px;
+  min-height: 56px;
   font-weight: 700;
+}
+
+.hud__button:disabled,
+.control-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  filter: saturate(0.7);
 }
 
 .game-frame {
@@ -102,6 +148,9 @@ button {
 .controls {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-areas:
+    ". up fire"
+    "left down right";
   gap: 12px;
   margin-top: 14px;
 }
@@ -116,13 +165,33 @@ button {
   box-shadow: inset 0 0 0 1px rgba(255, 209, 155, 0.24);
 }
 
+#upButton {
+  grid-area: up;
+}
+
+#leftButton {
+  grid-area: left;
+}
+
+#rightButton {
+  grid-area: right;
+}
+
+#downButton {
+  grid-area: down;
+}
+
+.controls__fire {
+  grid-area: fire;
+}
+
 .hud__button:hover,
 .control-button:hover {
   filter: brightness(1.08);
 }
 
-.hud__button:active,
-.control-button:active {
+.hud__button:active:not(:disabled),
+.control-button:active:not(:disabled) {
   transform: translateY(1px);
 }
 
@@ -136,8 +205,9 @@ button {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .hud__button {
-    min-height: 56px;
+  .hud__actions,
+  .hud > .hud__button {
+    grid-column: span 2;
   }
 }
 
@@ -146,7 +216,16 @@ button {
     grid-template-columns: 1fr;
   }
 
+  .hud__actions,
+  .hud > .hud__button {
+    grid-column: auto;
+  }
+
   .controls {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-areas:
+      "up fire"
+      "left right"
+      "down down";
   }
 }

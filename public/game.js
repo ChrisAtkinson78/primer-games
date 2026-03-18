@@ -19,11 +19,16 @@ export class MathBlasterGame {
     this.playerLabel = elements.playerLabel;
     this.enemyLabel = elements.enemyLabel;
     this.messageLabel = elements.messageLabel;
+    this.problemTop = elements.problemTop;
+    this.problemMiddle = elements.problemMiddle;
+    this.problemBottom = elements.problemBottom;
+    this.nextRoundButton = elements.nextRoundButton;
+    this.completeLabel = elements.completeLabel;
 
     this.width = this.canvas.width;
     this.height = this.canvas.height;
 
-    this.movement = { left: false, right: false };
+    this.movement = { left: false, right: false, up: false, down: false };
     this.playerSpeed = 380;
     this.playerShip = {
       x: this.width * 0.2,
@@ -76,7 +81,7 @@ export class MathBlasterGame {
 
     const bullet = {
       x: this.playerShip.x + this.playerShip.width * 0.45,
-      y: this.playerShip.y - this.playerShip.height * 0.6,
+      y: this.playerShip.y,
       progress: 0,
       speed: 1.7,
       radius: 7,
@@ -100,12 +105,9 @@ export class MathBlasterGame {
     this.updatePlayer(deltaSeconds);
     this.updateBullets(deltaSeconds);
 
-    if (this.phase === 'result') {
+    if (this.phase === 'result' || this.phase === 'complete') {
       this.phaseTimer += deltaSeconds;
       this.enemyShip.warp = clamp(this.phaseTimer / 1.4, 0, 1);
-      if (this.phaseTimer >= 1.6) {
-        this.advanceLevel();
-      }
     }
   }
 
@@ -114,15 +116,28 @@ export class MathBlasterGame {
       return;
     }
 
-    let direction = 0;
-    if (this.movement.left) direction -= 1;
-    if (this.movement.right) direction += 1;
+    let horizontalDirection = 0;
+    let verticalDirection = 0;
+    if (this.movement.left) horizontalDirection -= 1;
+    if (this.movement.right) horizontalDirection += 1;
+    if (this.movement.up) verticalDirection -= 1;
+    if (this.movement.down) verticalDirection += 1;
 
-    this.playerShip.x += direction * this.playerSpeed * deltaSeconds;
+    if (horizontalDirection !== 0 && verticalDirection !== 0) {
+      const normalizedSpeed = Math.SQRT1_2;
+      horizontalDirection *= normalizedSpeed;
+      verticalDirection *= normalizedSpeed;
+    }
+
+    this.playerShip.x += horizontalDirection * this.playerSpeed * deltaSeconds;
+    this.playerShip.y += verticalDirection * this.playerSpeed * deltaSeconds;
 
     const minX = 54;
     const maxX = this.width - this.playerShip.width - 54;
+    const minY = 54 + this.playerShip.height * 0.5;
+    const maxY = this.height - 54 - this.playerShip.height * 0.5;
     this.playerShip.x = clamp(this.playerShip.x, minX, maxX);
+    this.playerShip.y = clamp(this.playerShip.y, minY, maxY);
   }
 
   updateBullets(deltaSeconds) {
@@ -148,19 +163,25 @@ export class MathBlasterGame {
     this.updateHud();
 
     if (this.playerNumber === 0) {
-      this.phase = 'result';
-      this.phaseTimer = 0;
       this.resultValue = this.initialPlayerNumber + this.initialEnemyNumber;
       this.finalMessage = `${this.initialPlayerNumber} + ${this.initialEnemyNumber} = ${this.resultValue}`;
-      this.messageLabel.textContent = this.finalMessage;
+      if (this.levelIndex >= LEVELS.length - 1) {
+        this.phase = 'complete';
+        this.phaseTimer = 1.4;
+        this.enemyShip.warp = 1;
+        this.messageLabel.textContent = `All levels complete. Final sum: ${this.finalMessage}`;
+      } else {
+        this.phase = 'result';
+        this.phaseTimer = 0;
+        this.messageLabel.textContent = `${this.finalMessage}. Press Next Round.`;
+      }
+
+      this.updateHud();
     }
   }
 
-  advanceLevel() {
-    if (this.levelIndex >= LEVELS.length - 1) {
-      this.phase = 'complete';
-      this.enemyShip.warp = 1;
-      this.messageLabel.textContent = `All levels complete. Final sum: ${this.finalMessage}`;
+  nextRound() {
+    if (this.phase !== 'result') {
       return;
     }
 
@@ -181,6 +202,7 @@ export class MathBlasterGame {
     this.finalMessage = '';
     this.enemyShip.warp = 0;
     this.playerShip.x = this.width * 0.2;
+    this.playerShip.y = this.height * 0.78;
     this.messageLabel.textContent = `${config.label}. Fire ${this.playerNumber} shots to add onto the enemy.`;
     this.updateHud();
   }
@@ -189,6 +211,14 @@ export class MathBlasterGame {
     this.levelLabel.textContent = `${this.levelIndex + 1} / ${LEVELS.length}`;
     this.playerLabel.textContent = `${this.playerNumber} ship | ${this.playerNumber - this.bullets.length} ready`;
     this.enemyLabel.textContent = `${this.enemyNumber}`;
+    this.problemTop.textContent = `${this.initialPlayerNumber}`;
+    this.problemMiddle.textContent = `+ ${this.initialEnemyNumber}`;
+    this.problemBottom.textContent = this.resultValue === null ? '= ?' : `= ${this.resultValue}`;
+
+    const showNextRound = this.phase === 'result' || this.phase === 'complete';
+    this.nextRoundButton.hidden = !showNextRound;
+    this.nextRoundButton.disabled = this.phase === 'complete';
+    this.completeLabel.hidden = this.phase !== 'complete';
   }
 
   render() {
