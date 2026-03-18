@@ -13,29 +13,29 @@ root.innerHTML = `
             <span id="problemTop" class="problem-panel__value">0</span>
           </div>
           <div class="problem-panel__line">
-            <span class="problem-panel__operator" aria-hidden="true">+</span>
+            <span id="problemOpMiddle" class="problem-panel__operator" aria-hidden="true">+</span>
             <span id="problemMiddle" class="problem-panel__value">0</span>
           </div>
           <div class="problem-panel__line">
-            <span class="problem-panel__operator" aria-hidden="true">=</span>
+            <span id="problemOpBottom" class="problem-panel__operator" aria-hidden="true">=</span>
             <span id="problemBottom" class="problem-panel__value">?</span>
           </div>
         </div>
       </div>
       <div class="hud__group">
         <div class="hud__label">Level</div>
-        <div id="levelLabel" class="hud__value">1 / 3</div>
+        <div id="levelLabel" class="hud__value">1 / 12</div>
       </div>
       <div class="hud__group">
-        <div class="hud__label">Teleports Ready</div>
+        <div class="hud__label">Player Status</div>
         <div id="playerLabel" class="hud__value">0</div>
       </div>
       <div class="hud__group">
-        <div class="hud__label">Rescue Ship</div>
+        <div class="hud__label">Target Status</div>
         <div id="enemyLabel" class="hud__value">0</div>
       </div>
       <div class="hud__group hud__group--wide">
-        <div class="hud__label">Addition Result</div>
+        <div class="hud__label">Mission</div>
         <div id="messageLabel" class="hud__value">Press Teleport to send people to safety.</div>
       </div>
       <div class="hud__actions">
@@ -67,6 +67,8 @@ const game = new MathBlasterGame({
   messageLabel: document.querySelector('#messageLabel'),
   problemTop: document.querySelector('#problemTop'),
   problemMiddle: document.querySelector('#problemMiddle'),
+  problemOpMiddle: document.querySelector('#problemOpMiddle'),
+  problemOpBottom: document.querySelector('#problemOpBottom'),
   problemBottom: document.querySelector('#problemBottom'),
   nextRoundButton: document.querySelector('#nextRoundButton'),
   completeLabel: document.querySelector('#completeLabel'),

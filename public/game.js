@@ -1,7 +1,16 @@
 const LEVELS = [
-  { min: 1, max: 5, label: 'Level 1: Addition Warmup' },
-  { min: 3, max: 9, label: 'Level 2: Bigger Sums' },
-  { min: 6, max: 12, label: 'Level 3: Final Transfer' },
+  { op: '+', aMin: 1, aMax: 5, bMin: 1, bMax: 5, label: 'World 1-1: Addition Warmup' },
+  { op: '+', aMin: 3, aMax: 9, bMin: 2, bMax: 8, label: 'World 1-2: Addition Run' },
+  { op: '+', aMin: 6, aMax: 12, bMin: 4, bMax: 10, label: 'World 1-3: Addition Finale' },
+  { op: '-', aMin: 4, aMax: 9, bMin: 1, bMax: 4, label: 'World 2-1: Hazard Sweep' },
+  { op: '-', aMin: 6, aMax: 12, bMin: 2, bMax: 6, label: 'World 2-2: Hazard Control' },
+  { op: '-', aMin: 9, aMax: 15, bMin: 3, bMax: 8, label: 'World 2-3: Hazard Finale' },
+  { op: '×', aMin: 2, aMax: 4, bMin: 2, bMax: 5, label: 'World 3-1: Cargo Groups' },
+  { op: '×', aMin: 3, aMax: 6, bMin: 3, bMax: 6, label: 'World 3-2: Cargo Waves' },
+  { op: '×', aMin: 4, aMax: 7, bMin: 4, bMax: 7, label: 'World 3-3: Cargo Finale' },
+  { op: '÷', aMin: 6, aMax: 16, bMin: 2, bMax: 4, label: 'World 4-1: Shuttle Trips' },
+  { op: '÷', aMin: 8, aMax: 24, bMin: 2, bMax: 6, label: 'World 4-2: Shuttle Waves' },
+  { op: '÷', aMin: 12, aMax: 30, bMin: 3, bMax: 6, label: 'World 4-3: Shuttle Finale' },
 ];
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
@@ -13,6 +22,10 @@ const randomInt = (min, max) => {
 
 const lerp = (start, end, amount) => start + (end - start) * amount;
 
+const operatorGlyph = (op) => {
+  return op;
+};
+
 export class MathBlasterGame {
   constructor(elements) {
     this.canvas = elements.canvas;
@@ -23,6 +36,8 @@ export class MathBlasterGame {
     this.messageLabel = elements.messageLabel;
     this.problemTop = elements.problemTop;
     this.problemMiddle = elements.problemMiddle;
+    this.problemOpMiddle = elements.problemOpMiddle;
+    this.problemOpBottom = elements.problemOpBottom;
     this.problemBottom = elements.problemBottom;
     this.nextRoundButton = elements.nextRoundButton;
     this.completeLabel = elements.completeLabel;
@@ -49,12 +64,14 @@ export class MathBlasterGame {
     this.crashDuration = 0.9;
 
     this.levelIndex = 0;
+    this.currentLevel = LEVELS[0];
     this.bullets = [];
     this.phase = 'playing';
     this.phaseTimer = 0;
     this.resultValue = null;
     this.finalMessage = '';
     this.lastTime = 0;
+    this.tripCount = 0;
 
     this.resetLevel(0);
   }
@@ -71,6 +88,7 @@ export class MathBlasterGame {
     this.resultValue = null;
     this.finalMessage = '';
     this.enemyShip.warp = 0;
+    this.tripCount = 0;
     this.resetLevel(0);
   }
 
@@ -79,7 +97,7 @@ export class MathBlasterGame {
   }
 
   fire() {
-    if (this.phase !== 'playing' || this.playerNumber <= 0 || this.bullets.length >= this.playerNumber) {
+    if (this.phase !== 'playing' || this.availableShots() <= 0) {
       return;
     }
 
@@ -193,30 +211,82 @@ export class MathBlasterGame {
     this.bullets = activeBullets;
   }
 
+  availableShots() {
+    const reservedShots = this.bullets.length;
+    if (this.currentLevel.op === '÷') {
+      return Math.floor(this.playerNumber / this.operandB) - reservedShots;
+    }
+    return this.playerNumber - reservedShots;
+  }
+
   resolveHit() {
-    if (this.phase !== 'playing' || this.playerNumber <= 0) {
+    if (this.phase !== 'playing') {
       return;
     }
 
-    this.playerNumber -= 1;
-    this.enemyNumber += 1;
+    switch (this.currentLevel.op) {
+      case '+':
+        if (this.playerNumber <= 0) return;
+        this.playerNumber -= 1;
+        this.enemyNumber += 1;
+        break;
+      case '-':
+        if (this.playerNumber <= 0 || this.enemyNumber <= 0) return;
+        this.playerNumber -= 1;
+        this.enemyNumber -= 1;
+        break;
+      case '×':
+        if (this.playerNumber <= 0) return;
+        this.playerNumber -= 1;
+        this.enemyNumber += this.operandB;
+        break;
+      case '÷':
+        if (this.playerNumber < this.operandB) return;
+        this.playerNumber -= this.operandB;
+        this.enemyNumber += this.operandB;
+        this.tripCount += 1;
+        break;
+      default:
+        return;
+    }
+
     this.updateHud();
 
     if (this.playerNumber === 0) {
-      this.resultValue = this.initialPlayerNumber + this.initialEnemyNumber;
-      this.finalMessage = `${this.initialPlayerNumber} + ${this.initialEnemyNumber} = ${this.resultValue}`;
-      if (this.levelIndex >= LEVELS.length - 1) {
-        this.phase = 'complete';
-        this.phaseTimer = 1.4;
-        this.enemyShip.warp = 1;
-        this.messageLabel.textContent = `All rescues complete. Final sum: ${this.finalMessage}`;
-      } else {
-        this.phase = 'result';
-        this.phaseTimer = 0;
-        this.messageLabel.textContent = `${this.finalMessage}. Press Next Round.`;
-      }
+      this.finishRound();
+    }
+  }
 
-      this.updateHud();
+  finishRound() {
+    this.resultValue = this.computeResultValue();
+    this.finalMessage = `${this.operandA} ${operatorGlyph(this.currentLevel.op)} ${this.operandB} = ${this.resultValue}`;
+
+    if (this.levelIndex >= LEVELS.length - 1) {
+      this.phase = 'complete';
+      this.phaseTimer = 1.4;
+      this.enemyShip.warp = 1;
+      this.messageLabel.textContent = `All worlds complete. ${this.finalMessage}`;
+    } else {
+      this.phase = 'result';
+      this.phaseTimer = 0;
+      this.messageLabel.textContent = `${this.finalMessage}. Press Next Round.`;
+    }
+
+    this.updateHud();
+  }
+
+  computeResultValue() {
+    switch (this.currentLevel.op) {
+      case '+':
+        return this.operandA + this.operandB;
+      case '-':
+        return this.operandA - this.operandB;
+      case '×':
+        return this.operandA * this.operandB;
+      case '÷':
+        return this.tripCount;
+      default:
+        return 0;
     }
   }
 
@@ -264,11 +334,8 @@ export class MathBlasterGame {
 
   resetLevel(nextLevelIndex) {
     this.levelIndex = nextLevelIndex;
-    const config = LEVELS[this.levelIndex];
-    this.initialPlayerNumber = randomInt(config.min, config.max);
-    this.initialEnemyNumber = randomInt(config.min, config.max);
-    this.playerNumber = this.initialPlayerNumber;
-    this.enemyNumber = this.initialEnemyNumber;
+    this.currentLevel = LEVELS[this.levelIndex];
+    this.setupRoundState();
     this.bullets = [];
     this.phase = 'playing';
     this.phaseTimer = 0;
@@ -277,16 +344,140 @@ export class MathBlasterGame {
     this.enemyShip.warp = 0;
     this.playerShip.x = this.width * 0.2;
     this.playerShip.y = this.height * 0.78;
-    this.messageLabel.textContent = `${config.label}. Teleport ${this.playerNumber} people to the rescue ship.`;
+    this.messageLabel.textContent = this.getInstructionMessage();
     this.updateHud();
+  }
+
+  setupRoundState() {
+    const { op, aMin, aMax, bMin, bMax } = this.currentLevel;
+    const operands = this.generateOperands(op, aMin, aMax, bMin, bMax);
+    this.operandA = operands.a;
+    this.operandB = operands.b;
+    this.tripCount = 0;
+
+    switch (op) {
+      case '+':
+        this.initialPlayerNumber = this.operandA;
+        this.initialEnemyNumber = this.operandB;
+        break;
+      case '-':
+        this.initialPlayerNumber = this.operandB;
+        this.initialEnemyNumber = this.operandA;
+        break;
+      case '×':
+        this.initialPlayerNumber = this.operandA;
+        this.initialEnemyNumber = 0;
+        break;
+      case '÷':
+        this.initialPlayerNumber = this.operandA;
+        this.initialEnemyNumber = 0;
+        break;
+      default:
+        this.initialPlayerNumber = 0;
+        this.initialEnemyNumber = 0;
+        break;
+    }
+
+    this.playerNumber = this.initialPlayerNumber;
+    this.enemyNumber = this.initialEnemyNumber;
+  }
+
+  generateOperands(op, aMin, aMax, bMin, bMax) {
+    if (op === '-') {
+      const b = randomInt(bMin, bMax);
+      const a = randomInt(Math.max(aMin, b), aMax);
+      return { a, b };
+    }
+
+    if (op === '÷') {
+      const validPairs = [];
+      for (let b = bMin; b <= bMax; b += 1) {
+        for (let a = aMin; a <= aMax; a += 1) {
+          if (a % b === 0) {
+            validPairs.push({ a, b });
+          }
+        }
+      }
+
+      return validPairs[randomInt(0, validPairs.length - 1)];
+    }
+
+    return {
+      a: randomInt(aMin, aMax),
+      b: randomInt(bMin, bMax),
+    };
+  }
+
+  getInstructionMessage() {
+    const { label, op } = this.currentLevel;
+
+    switch (op) {
+      case '+':
+        return `${label}. Click or tap Teleport to add ${this.operandB} more to the rescue ship.`;
+      case '-':
+        return `${label}. Click or tap Teleport to clear ${this.operandB} hazards with repair drones.`;
+      case '×':
+        return `${label}. Click or tap Teleport to send ${this.operandA} waves of ${this.operandB}.`;
+      case '÷':
+        return `${label}. Click or tap Teleport to move ${this.operandB} people per trip.`;
+      default:
+        return `${label}. Click or tap Teleport.`;
+    }
+  }
+
+  getPlayerStatusText() {
+    const teleportsReady = Math.max(0, this.availableShots());
+
+    switch (this.currentLevel.op) {
+      case '+':
+        return `${this.playerNumber} aboard | ${teleportsReady} teleports ready`;
+      case '-':
+        return `${this.playerNumber} drones | ${teleportsReady} teleports ready`;
+      case '×':
+        return `${this.playerNumber} teleports left | ${teleportsReady} ready`;
+      case '÷':
+        return `${this.playerNumber} aboard | ${teleportsReady} trips ready`;
+      default:
+        return `${this.playerNumber}`;
+    }
+  }
+
+  getEnemyStatusText() {
+    switch (this.currentLevel.op) {
+      case '-':
+        return `${this.enemyNumber} hazards`;
+      case '×':
+        return `${this.enemyNumber} delivered`;
+      case '÷':
+        return `${this.enemyNumber} rescued | ${this.tripCount} trips`;
+      default:
+        return `${this.enemyNumber}`;
+    }
+  }
+
+  getOverlayTitle() {
+    switch (this.currentLevel.op) {
+      case '+':
+        return 'Addition Complete';
+      case '-':
+        return 'Subtraction Complete';
+      case '×':
+        return 'Multiplication Complete';
+      case '÷':
+        return 'Division Complete';
+      default:
+        return 'Round Complete';
+    }
   }
 
   updateHud() {
     this.levelLabel.textContent = `${this.levelIndex + 1} / ${LEVELS.length}`;
-    this.playerLabel.textContent = `${this.playerNumber} aboard | ${this.playerNumber - this.bullets.length} teleports ready`;
-    this.enemyLabel.textContent = `${this.enemyNumber}`;
-    this.problemTop.textContent = `${this.initialPlayerNumber}`;
-    this.problemMiddle.textContent = `${this.initialEnemyNumber}`;
+    this.playerLabel.textContent = this.getPlayerStatusText();
+    this.enemyLabel.textContent = this.getEnemyStatusText();
+    this.problemTop.textContent = `${this.operandA}`;
+    this.problemMiddle.textContent = `${this.operandB}`;
+    this.problemOpMiddle.textContent = operatorGlyph(this.currentLevel.op);
+    this.problemOpBottom.textContent = '=';
     this.problemBottom.textContent = this.resultValue === null ? '?' : `${this.resultValue}`;
 
     const showNextRound = this.phase === 'result' || this.phase === 'complete';
@@ -493,7 +684,7 @@ export class MathBlasterGame {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.font = '700 26px Arial, sans-serif';
-    ctx.fillText('Addition Complete', this.width / 2, this.height * 0.34);
+    ctx.fillText(this.getOverlayTitle(), this.width / 2, this.height * 0.34);
     ctx.font = '700 54px Arial, sans-serif';
     ctx.fillText(resultText, this.width / 2, this.height * 0.48);
 
