@@ -21,6 +21,7 @@ root.innerHTML = `
             <span id="problemBottom" class="problem-panel__value">?</span>
           </div>
         </div>
+        <div id="roundRecap" class="hud__note hud__note--recap" hidden></div>
       </div>
       <div class="hud__group">
         <div class="hud__label">Level</div>
@@ -37,6 +38,7 @@ root.innerHTML = `
       <div class="hud__group hud__group--wide">
         <div class="hud__label">Mission</div>
         <div id="messageLabel" class="hud__value">Press Teleport to send people to safety.</div>
+        <div id="helperCaption" class="hud__note" hidden></div>
       </div>
       <div class="hud__actions">
         <button id="nextRoundButton" class="hud__button" type="button" hidden>Next Round</button>
@@ -70,6 +72,8 @@ const game = new MathBlasterGame({
   problemOpMiddle: document.querySelector('#problemOpMiddle'),
   problemOpBottom: document.querySelector('#problemOpBottom'),
   problemBottom: document.querySelector('#problemBottom'),
+  helperCaption: document.querySelector('#helperCaption'),
+  roundRecap: document.querySelector('#roundRecap'),
   nextRoundButton: document.querySelector('#nextRoundButton'),
   completeLabel: document.querySelector('#completeLabel'),
 });

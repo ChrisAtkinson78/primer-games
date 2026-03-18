@@ -26,6 +26,17 @@ const operatorGlyph = (op) => {
   return op;
 };
 
+const EQUATION_FLASH_MS = 300;
+const HELPER_CAPTION_SECONDS = 4.2;
+const POPUP_LIFETIME_SECONDS = 0.85;
+
+const HELPER_CAPTIONS = {
+  '+': 'Each teleport moves 1 from your ship to the rescue ship. That makes the rescue total grow by 1.',
+  '-': 'Each teleport uses 1 drone to remove 1 hazard. Both sides go down together.',
+  '×': 'Each teleport sends one whole group of B. Repeating that A times builds multiplication.',
+  '÷': 'Each trip moves B at once. Counting the trips shows how many equal groups fit into A.',
+};
+
 export class MathBlasterGame {
   constructor(elements) {
     this.canvas = elements.canvas;
@@ -39,6 +50,8 @@ export class MathBlasterGame {
     this.problemOpMiddle = elements.problemOpMiddle;
     this.problemOpBottom = elements.problemOpBottom;
     this.problemBottom = elements.problemBottom;
+    this.helperCaption = elements.helperCaption;
+    this.roundRecap = elements.roundRecap;
     this.nextRoundButton = elements.nextRoundButton;
     this.completeLabel = elements.completeLabel;
 
@@ -72,6 +85,10 @@ export class MathBlasterGame {
     this.finalMessage = '';
     this.lastTime = 0;
     this.tripCount = 0;
+    this.helperCaptionTimer = 0;
+    this.deltaPopups = [];
+    this.explainedOperations = new Set();
+    this.flashTimeouts = new Map();
 
     this.resetLevel(0);
   }
@@ -89,6 +106,11 @@ export class MathBlasterGame {
     this.finalMessage = '';
     this.enemyShip.warp = 0;
     this.tripCount = 0;
+    this.helperCaptionTimer = 0;
+    this.deltaPopups = [];
+    this.explainedOperations.clear();
+    this.hideHelperCaption();
+    this.hideRoundRecap();
     this.resetLevel(0);
   }
 
@@ -127,6 +149,8 @@ export class MathBlasterGame {
     this.updatePlayer(deltaSeconds);
     this.updateEnemy(deltaSeconds);
     this.updateBullets(deltaSeconds);
+    this.updateDeltaPopups(deltaSeconds);
+    this.updateHelperCaption(deltaSeconds);
 
     if (this.phase === 'crash') {
       this.phaseTimer += deltaSeconds;
@@ -224,32 +248,44 @@ export class MathBlasterGame {
       return;
     }
 
-    switch (this.currentLevel.op) {
+    const op = this.currentLevel.op;
+    let hitResolved = false;
+
+    switch (op) {
       case '+':
         if (this.playerNumber <= 0) return;
         this.playerNumber -= 1;
         this.enemyNumber += 1;
+        hitResolved = true;
         break;
       case '-':
         if (this.playerNumber <= 0 || this.enemyNumber <= 0) return;
         this.playerNumber -= 1;
         this.enemyNumber -= 1;
+        hitResolved = true;
         break;
       case '×':
         if (this.playerNumber <= 0) return;
         this.playerNumber -= 1;
         this.enemyNumber += this.operandB;
+        hitResolved = true;
         break;
       case '÷':
         if (this.playerNumber < this.operandB) return;
         this.playerNumber -= this.operandB;
         this.enemyNumber += this.operandB;
         this.tripCount += 1;
+        hitResolved = true;
         break;
       default:
         return;
     }
 
+    if (!hitResolved) {
+      return;
+    }
+
+    this.showOperationFeedback(op);
     this.updateHud();
 
     if (this.playerNumber === 0) {
@@ -272,6 +308,7 @@ export class MathBlasterGame {
       this.messageLabel.textContent = `${this.finalMessage}. Press Next Round.`;
     }
 
+    this.showRoundRecap();
     this.updateHud();
   }
 
@@ -321,6 +358,7 @@ export class MathBlasterGame {
     this.phaseTimer = 0;
     this.bullets = [];
     this.messageLabel.textContent = 'Rescue ship collision. Resetting this level...';
+    this.hideHelperCaption();
     this.updateHud();
   }
 
@@ -342,9 +380,13 @@ export class MathBlasterGame {
     this.resultValue = null;
     this.finalMessage = '';
     this.enemyShip.warp = 0;
+    this.helperCaptionTimer = 0;
+    this.deltaPopups = [];
     this.playerShip.x = this.width * 0.2;
     this.playerShip.y = this.height * 0.78;
     this.messageLabel.textContent = this.getInstructionMessage();
+    this.hideHelperCaption();
+    this.hideRoundRecap();
     this.updateHud();
   }
 
@@ -486,6 +528,133 @@ export class MathBlasterGame {
     this.completeLabel.hidden = this.phase !== 'complete';
   }
 
+  updateHelperCaption(deltaSeconds) {
+    if (this.helperCaptionTimer <= 0) {
+      return;
+    }
+
+    this.helperCaptionTimer = Math.max(0, this.helperCaptionTimer - deltaSeconds);
+    if (this.helperCaptionTimer === 0) {
+      this.hideHelperCaption();
+    }
+  }
+
+  updateDeltaPopups(deltaSeconds) {
+    this.deltaPopups = this.deltaPopups.filter((popup) => {
+      popup.age += deltaSeconds;
+      return popup.age < popup.lifetime;
+    });
+  }
+
+  showOperationFeedback(op) {
+    this.spawnDeltaPopups(op);
+    this.flashEquationParts();
+
+    if (!this.explainedOperations.has(op)) {
+      this.explainedOperations.add(op);
+      this.showHelperCaption(HELPER_CAPTIONS[op], HELPER_CAPTION_SECONDS);
+    }
+  }
+
+  showHelperCaption(text, durationSeconds) {
+    this.helperCaption.textContent = text;
+    this.helperCaption.hidden = false;
+    this.helperCaptionTimer = durationSeconds;
+  }
+
+  hideHelperCaption() {
+    this.helperCaption.hidden = true;
+    this.helperCaption.textContent = '';
+    this.helperCaptionTimer = 0;
+  }
+
+  showRoundRecap() {
+    this.roundRecap.textContent = this.getRoundRecapText();
+    this.roundRecap.hidden = false;
+  }
+
+  hideRoundRecap() {
+    this.roundRecap.hidden = true;
+    this.roundRecap.textContent = '';
+  }
+
+  getRoundRecapText() {
+    switch (this.currentLevel.op) {
+      case '+':
+        return `${this.operandA} plus ${this.operandB} makes ${this.resultValue}. You moved 1 person each teleport until both groups were together.`;
+      case '-':
+        return `${this.operandA} minus ${this.operandB} leaves ${this.resultValue}. Each teleport cleared 1 hazard with 1 drone.`;
+      case '×':
+        return `${this.operandA} groups of ${this.operandB} make ${this.resultValue}. Each teleport added one full group.`;
+      case '÷':
+        return `${this.operandA} divided into groups of ${this.operandB} makes ${this.resultValue} trips. Each trip moved the same amount.`;
+      default:
+        return this.finalMessage;
+    }
+  }
+
+  flashEquationParts() {
+    this.flashElement(this.problemTop, 'problem-panel__value--flash');
+    this.flashElement(this.problemMiddle, 'problem-panel__value--flash');
+    this.flashElement(this.problemOpMiddle, 'problem-panel__operator--flash');
+  }
+
+  flashElement(element, className) {
+    const timeoutKey = `${element.id}:${className}`;
+    const existingTimeout = this.flashTimeouts.get(timeoutKey);
+    if (existingTimeout) {
+      clearTimeout(existingTimeout);
+    }
+
+    element.classList.add(className);
+    const timeout = window.setTimeout(() => {
+      element.classList.remove(className);
+      this.flashTimeouts.delete(timeoutKey);
+    }, EQUATION_FLASH_MS);
+    this.flashTimeouts.set(timeoutKey, timeout);
+  }
+
+  spawnDeltaPopups(op) {
+    const playerX = this.playerShip.x + this.playerShip.width * 0.36;
+    const playerY = this.playerShip.y - this.playerShip.height * 0.9;
+    const enemyX = this.enemyShip.x + this.enemyShip.width * 0.5;
+    const enemyY = this.enemyShip.y - this.enemyShip.height * 0.95;
+
+    switch (op) {
+      case '+':
+        this.addPopup(playerX, playerY, '-1', '#ffd39a');
+        this.addPopup(enemyX, enemyY, '+1', '#9df2ff');
+        break;
+      case '-':
+        this.addPopup(playerX, playerY, '-1', '#ffd39a');
+        this.addPopup(enemyX, enemyY, '-1', '#ffb3b3');
+        break;
+      case '×':
+        this.addPopup(playerX, playerY, '-1', '#ffd39a');
+        this.addPopup(enemyX, enemyY, `+${this.operandB}`, '#9df2ff');
+        break;
+      case '÷':
+        this.addPopup(playerX, playerY, `-${this.operandB}`, '#ffd39a');
+        this.addPopup(enemyX, enemyY, `+${this.operandB}`, '#9df2ff');
+        this.addPopup(this.width - 126, 76, 'Trip +1', '#fff2a8', 1);
+        break;
+      default:
+        break;
+    }
+  }
+
+  addPopup(x, y, text, color, scale = 0) {
+    this.deltaPopups.push({
+      x,
+      y,
+      text,
+      color,
+      age: 0,
+      lifetime: POPUP_LIFETIME_SECONDS,
+      scale,
+    });
+  }
+
   render() {
     const ctx = this.ctx;
     ctx.clearRect(0, 0, this.width, this.height);
@@ -495,6 +664,7 @@ export class MathBlasterGame {
     this.drawPlayer(ctx);
     this.drawEnemy(ctx);
     this.drawBullets(ctx);
+    this.drawDeltaPopups(ctx);
 
     if (this.phase === 'result' || this.phase === 'complete') {
       this.drawResultOverlay(ctx);
@@ -670,8 +840,31 @@ export class MathBlasterGame {
     }
   }
 
+  drawDeltaPopups(ctx) {
+    for (const popup of this.deltaPopups) {
+      const progress = popup.age / popup.lifetime;
+      const lift = 28 * progress;
+      const alpha = 1 - progress;
+      const scale = 1 + popup.scale * (1 - progress * 0.5);
+
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.translate(popup.x, popup.y - lift);
+      ctx.scale(scale, scale);
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.font = '700 24px Arial, sans-serif';
+      ctx.fillStyle = popup.color;
+      ctx.strokeStyle = 'rgba(6, 12, 20, 0.78)';
+      ctx.lineWidth = 5;
+      ctx.strokeText(popup.text, 0, 0);
+      ctx.fillText(popup.text, 0, 0);
+      ctx.restore();
+    }
+  }
+
   drawResultOverlay(ctx) {
-    const resultText = this.finalMessage || (this.resultValue ? String(this.resultValue) : '');
+    const resultText = this.finalMessage || (this.resultValue !== null ? String(this.resultValue) : '');
     if (!resultText) {
       return;
     }

@@ -97,6 +97,29 @@ button {
   text-align: right;
 }
 
+.problem-panel__value--flash,
+.problem-panel__operator--flash {
+  color: #fff8de;
+  text-shadow: 0 0 16px rgba(255, 214, 117, 0.8);
+}
+
+.hud__note {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid rgba(157, 221, 255, 0.14);
+  border-radius: 14px;
+  background: rgba(8, 18, 28, 0.56);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.hud__note--recap {
+  color: #ffeccf;
+  background: rgba(51, 29, 11, 0.38);
+  border-color: rgba(255, 209, 155, 0.18);
+}
+
 .hud__actions {
   display: grid;
   gap: 8px;
