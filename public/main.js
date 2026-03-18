@@ -232,56 +232,83 @@ const shuffle = (items) => {
   return copy;
 };
 
-const createPlanningMissionQuestions = () => {
+const createPlanningMissionQuestions = ({ ops, digits, perOp = 3 } = {}) => {
+  // Default: match the game ops/difficulty so the briefing doesn't surprise the player.
+  const opList = Array.isArray(ops) && ops.length > 0 ? ops : ['+', '-', '×', '÷'];
+  const digitMax = DIGIT_LIMITS[digits] || 9;
+
   const questions = [];
 
-  for (let count = 0; count < 3; count += 1) {
-    const a = randomInt(1, 9);
-    const b = randomInt(1, 9);
-    questions.push({
-      answer: a + b,
-      op: '+',
-      a,
-      b,
-      prompt: `Teleport briefing: ${a} people are already aboard the rescue ship, and ${b} more arrive by teleport. How many people are on the rescue ship now? (${a} + ${b})`,
-    });
-  }
+  const addAddition = () => {
+    for (let count = 0; count < perOp; count += 1) {
+      const a = randomInt(1, digitMax);
+      const b = randomInt(1, digitMax);
+      questions.push({
+        answer: a + b,
+        op: '+',
+        a,
+        b,
+        prompt: `Teleport briefing: ${a} people are already aboard the rescue ship, and ${b} more arrive by teleport. How many people are on the rescue ship now? (${a} + ${b})`,
+      });
+    }
+  };
 
-  for (let count = 0; count < 3; count += 1) {
-    const a = randomInt(5, 18);
-    const b = randomInt(1, Math.min(9, a - 1));
-    questions.push({
-      answer: a - b,
-      op: '-',
-      a,
-      b,
-      prompt: `Drone briefing: ${a} hazards block the route, and the drones clear ${b} of them. How many hazards are left? (${a} - ${b})`,
-    });
-  }
+  const addSubtraction = () => {
+    for (let count = 0; count < perOp; count += 1) {
+      // Ensure A > B
+      const a = randomInt(Math.max(3, Math.floor(digitMax / 4)), digitMax);
+      const b = randomInt(1, Math.max(1, Math.min(digitMax, a - 1)));
+      questions.push({
+        answer: a - b,
+        op: '-',
+        a,
+        b,
+        prompt: `Drone briefing: ${a} hazards block the route, and the drones clear ${b} of them. How many hazards are left? (${a} - ${b})`,
+      });
+    }
+  };
 
-  for (let count = 0; count < 3; count += 1) {
-    const a = randomInt(2, 6);
-    const b = randomInt(2, 6);
-    questions.push({
-      answer: a * b,
-      op: '×',
-      a,
-      b,
-      prompt: `Cargo briefing: send ${a} cargo waves with ${b} crates in each wave. How many crates are sent altogether? (${a} × ${b})`,
-    });
-  }
+  const addMultiplication = () => {
+    // Keep kid-friendly: even with digits=3, cap factors to avoid huge products.
+    const aMax = digits >= 3 ? 20 : (digits === 2 ? 12 : 9);
+    const bMax = digits >= 3 ? 20 : (digits === 2 ? 12 : 9);
 
-  for (let count = 0; count < 3; count += 1) {
-    const b = randomInt(2, 5);
-    const trips = randomInt(2, 6);
-    const a = b * trips;
-    questions.push({
-      answer: trips,
-      op: '÷',
-      a,
-      b,
-      prompt: `Shuttle briefing: ${a} people must travel, and each shuttle trip moves ${b} people. How many trips are needed? (${a} ÷ ${b})`,
-    });
+    for (let count = 0; count < perOp; count += 1) {
+      const a = randomInt(2, aMax);
+      const b = randomInt(2, bMax);
+      questions.push({
+        answer: a * b,
+        op: '×',
+        a,
+        b,
+        prompt: `Cargo briefing: send ${a} cargo waves with ${b} crates in each wave. How many crates are sent altogether? (${a} × ${b})`,
+      });
+    }
+  };
+
+  const addDivision = () => {
+    const bMax = digits >= 3 ? 25 : (digits === 2 ? 12 : 6);
+    const tripsMax = digits >= 3 ? 20 : (digits === 2 ? 12 : 9);
+
+    for (let count = 0; count < perOp; count += 1) {
+      const b = randomInt(2, bMax);
+      const trips = randomInt(2, tripsMax);
+      const a = b * trips;
+      questions.push({
+        answer: trips,
+        op: '÷',
+        a,
+        b,
+        prompt: `Shuttle briefing: ${a} people must travel, and each shuttle trip moves ${b} people. How many trips are needed? (${a} ÷ ${b})`,
+      });
+    }
+  };
+
+  for (const op of opList) {
+    if (op === '+') addAddition();
+    if (op === '-') addSubtraction();
+    if (op === '×') addMultiplication();
+    if (op === '÷') addDivision();
   }
 
   return shuffle(questions);
@@ -359,7 +386,10 @@ const renderPlanningMissionComplete = () => {
 };
 
 const openPlanningMission = () => {
-  missionState.questions = createPlanningMissionQuestions();
+  missionState.questions = createPlanningMissionQuestions({
+    ops: configuredOps,
+    digits: configuredDigits,
+  });
   missionState.index = 0;
   missionState.active = true;
   missionState.complete = false;
@@ -427,9 +457,21 @@ const submitPlanningMissionAnswer = () => {
   }, 500);
 };
 
+const configuredLevels = getConfiguredLevels();
+const configuredOps = configuredLevels ? [...new Set(configuredLevels.map((level) => level.op))] : null;
+const configuredDigits = (() => {
+  if (!configuredLevels) return null;
+  const maxSeen = Math.max(
+    ...configuredLevels.flatMap((level) => [level.aMax ?? 0, level.bMax ?? 0]).filter(Number.isFinite),
+  );
+  if (maxSeen > 99) return 3;
+  if (maxSeen > 9) return 2;
+  return 1;
+})();
+
 const game = new MathBlasterGame({
   canvas: document.querySelector('#gameCanvas'),
-  levels: getConfiguredLevels(),
+  levels: configuredLevels,
   levelLabel: document.querySelector('#levelLabel'),
   playerLabel: document.querySelector('#playerLabel'),
   enemyLabel: document.querySelector('#enemyLabel'),
