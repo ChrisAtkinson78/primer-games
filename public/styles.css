@@ -221,6 +221,104 @@ button {
   grid-area: fire;
 }
 
+.mission-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+}
+
+.mission-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(4, 10, 18, 0.82);
+  backdrop-filter: blur(6px);
+}
+
+.mission-modal__panel {
+  position: relative;
+  width: min(720px, 100%);
+  padding: 28px;
+  border: 1px solid rgba(157, 221, 255, 0.22);
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at top, rgba(119, 220, 255, 0.12), transparent 36%),
+    rgba(9, 18, 30, 0.96);
+  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.42);
+}
+
+.mission-modal__eyebrow {
+  margin-bottom: 8px;
+  color: #ffe3b8;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+}
+
+.mission-modal__title {
+  margin: 0 0 10px;
+  font-size: 36px;
+}
+
+.mission-modal__progress {
+  margin: 0 0 18px;
+  color: var(--accent);
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.mission-modal__prompt {
+  margin: 0 0 18px;
+  color: var(--text);
+  font-size: 22px;
+  line-height: 1.45;
+}
+
+.mission-modal__feedback {
+  min-height: 28px;
+  margin: 0 0 12px;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.mission-modal__feedback[data-state='correct'] {
+  color: #b8ffd0;
+}
+
+.mission-modal__feedback[data-state='incorrect'] {
+  color: #ffd0c5;
+}
+
+.mission-modal__field {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.mission-modal__input {
+  width: 100%;
+  margin-bottom: 16px;
+  padding: 16px 18px;
+  border: 1px solid rgba(157, 221, 255, 0.22);
+  border-radius: 16px;
+  background: rgba(5, 12, 20, 0.92);
+  color: var(--text);
+  font: inherit;
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.mission-modal__button {
+  min-width: 180px;
+}
+
 .hud__button:hover,
 .control-button:hover {
   filter: brightness(1.08);
@@ -263,5 +361,25 @@ button {
       "up fire"
       "left right"
       "down down";
+  }
+
+  .mission-modal {
+    padding: 12px;
+  }
+
+  .mission-modal__panel {
+    padding: 20px;
+  }
+
+  .mission-modal__title {
+    font-size: 30px;
+  }
+
+  .mission-modal__prompt {
+    font-size: 19px;
+  }
+
+  .mission-modal__input {
+    font-size: 24px;
   }
 }

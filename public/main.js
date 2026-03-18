@@ -58,8 +58,199 @@ root.innerHTML = `
       <button id="rightButton" class="control-button" type="button">Move Right</button>
       <button id="downButton" class="control-button" type="button">Move Down</button>
     </div>
+
+    <div id="planningMissionModal" class="mission-modal" hidden>
+      <div class="mission-modal__backdrop"></div>
+      <section
+        class="mission-modal__panel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="missionTitle"
+        aria-describedby="missionPrompt"
+      >
+        <div class="mission-modal__eyebrow">Planning Mission</div>
+        <h2 id="missionTitle" class="mission-modal__title">Mission Briefing</h2>
+        <p id="missionProgress" class="mission-modal__progress">Question 1 / 12</p>
+        <p id="missionPrompt" class="mission-modal__prompt"></p>
+        <p id="missionFeedback" class="mission-modal__feedback" aria-live="polite"></p>
+        <label class="mission-modal__field" for="missionAnswer">Your answer</label>
+        <input
+          id="missionAnswer"
+          class="mission-modal__input"
+          type="text"
+          inputmode="numeric"
+          autocomplete="off"
+          spellcheck="false"
+        />
+        <button id="missionConfirmButton" class="hud__button mission-modal__button" type="button">Confirm</button>
+      </section>
+    </div>
   </div>
 `;
+
+const randomInt = (min, max) => {
+  const span = max - min + 1;
+  return min + Math.floor(Math.random() * span);
+};
+
+const shuffle = (items) => {
+  const copy = [...items];
+  for (let index = copy.length - 1; index > 0; index -= 1) {
+    const swapIndex = randomInt(0, index);
+    [copy[index], copy[swapIndex]] = [copy[swapIndex], copy[index]];
+  }
+  return copy;
+};
+
+const createPlanningMissionQuestions = () => {
+  const questions = [];
+
+  for (let count = 0; count < 3; count += 1) {
+    const a = randomInt(1, 9);
+    const b = randomInt(1, 9);
+    questions.push({
+      answer: a + b,
+      prompt: `Teleport briefing: ${a} people are already aboard the rescue ship, and ${b} more arrive by teleport. How many people are on the rescue ship now? (${a} + ${b})`,
+    });
+  }
+
+  for (let count = 0; count < 3; count += 1) {
+    const a = randomInt(5, 18);
+    const b = randomInt(1, Math.min(9, a - 1));
+    questions.push({
+      answer: a - b,
+      prompt: `Drone briefing: ${a} hazards block the route, and the drones clear ${b} of them. How many hazards are left? (${a} - ${b})`,
+    });
+  }
+
+  for (let count = 0; count < 3; count += 1) {
+    const a = randomInt(2, 6);
+    const b = randomInt(2, 6);
+    questions.push({
+      answer: a * b,
+      prompt: `Cargo briefing: send ${a} cargo waves with ${b} crates in each wave. How many crates are sent altogether? (${a} × ${b})`,
+    });
+  }
+
+  for (let count = 0; count < 3; count += 1) {
+    const b = randomInt(2, 5);
+    const trips = randomInt(2, 6);
+    const a = b * trips;
+    questions.push({
+      answer: trips,
+      prompt: `Shuttle briefing: ${a} people must travel, and each shuttle trip moves ${b} people. How many trips are needed? (${a} ÷ ${b})`,
+    });
+  }
+
+  return shuffle(questions);
+};
+
+const missionElements = {
+  modal: document.querySelector('#planningMissionModal'),
+  title: document.querySelector('#missionTitle'),
+  progress: document.querySelector('#missionProgress'),
+  prompt: document.querySelector('#missionPrompt'),
+  feedback: document.querySelector('#missionFeedback'),
+  answer: document.querySelector('#missionAnswer'),
+  confirmButton: document.querySelector('#missionConfirmButton'),
+};
+
+const missionState = {
+  questions: [],
+  index: 0,
+  active: false,
+  complete: false,
+};
+
+const closePlanningMission = () => {
+  missionState.active = false;
+  missionState.complete = false;
+  missionState.questions = [];
+  missionState.index = 0;
+  missionElements.modal.hidden = true;
+  missionElements.answer.value = '';
+  missionElements.feedback.textContent = '';
+};
+
+const renderPlanningMissionQuestion = () => {
+  const question = missionState.questions[missionState.index];
+  missionElements.title.textContent = 'Mission Briefing';
+  missionElements.progress.textContent = `Question ${missionState.index + 1} / ${missionState.questions.length}`;
+  missionElements.prompt.textContent = question.prompt;
+  missionElements.feedback.textContent = '';
+  missionElements.feedback.dataset.state = '';
+  missionElements.answer.hidden = false;
+  missionElements.answer.disabled = false;
+  missionElements.answer.value = '';
+  missionElements.confirmButton.textContent = 'Confirm';
+  missionElements.answer.focus();
+};
+
+const renderPlanningMissionComplete = () => {
+  missionState.complete = true;
+  missionElements.title.textContent = 'Mission Complete';
+  missionElements.progress.textContent = 'All 12 questions solved';
+  missionElements.prompt.textContent = 'The Planning Mission is ready. Every rescue route, drone sweep, cargo wave, and shuttle trip is confirmed.';
+  missionElements.feedback.textContent = 'Correct. Briefing complete.';
+  missionElements.feedback.dataset.state = 'correct';
+  missionElements.answer.hidden = true;
+  missionElements.confirmButton.textContent = 'Close Briefing';
+  missionElements.confirmButton.focus();
+};
+
+const openPlanningMission = () => {
+  missionState.questions = createPlanningMissionQuestions();
+  missionState.index = 0;
+  missionState.active = true;
+  missionState.complete = false;
+  missionElements.modal.hidden = false;
+  renderPlanningMissionQuestion();
+};
+
+const submitPlanningMissionAnswer = () => {
+  if (!missionState.active) {
+    return;
+  }
+
+  if (missionState.complete) {
+    closePlanningMission();
+    return;
+  }
+
+  const question = missionState.questions[missionState.index];
+  const answer = Number.parseInt(missionElements.answer.value.trim(), 10);
+
+  if (!Number.isFinite(answer)) {
+    missionElements.feedback.textContent = 'Try again.';
+    missionElements.feedback.dataset.state = 'incorrect';
+    missionElements.answer.focus();
+    missionElements.answer.select();
+    return;
+  }
+
+  if (answer !== question.answer) {
+    missionElements.feedback.textContent = 'Try again.';
+    missionElements.feedback.dataset.state = 'incorrect';
+    missionElements.answer.focus();
+    missionElements.answer.select();
+    return;
+  }
+
+  missionElements.feedback.textContent = 'Correct.';
+  missionElements.feedback.dataset.state = 'correct';
+
+  if (missionState.index >= missionState.questions.length - 1) {
+    renderPlanningMissionComplete();
+    return;
+  }
+
+  missionState.index += 1;
+  window.setTimeout(() => {
+    if (missionState.active && !missionState.complete) {
+      renderPlanningMissionQuestion();
+    }
+  }, 500);
+};
 
 const game = new MathBlasterGame({
   canvas: document.querySelector('#gameCanvas'),
@@ -76,6 +267,7 @@ const game = new MathBlasterGame({
   roundRecap: document.querySelector('#roundRecap'),
   nextRoundButton: document.querySelector('#nextRoundButton'),
   completeLabel: document.querySelector('#completeLabel'),
+  onComplete: openPlanningMission,
 });
 
 const held = {
@@ -106,6 +298,12 @@ const keyMap = {
 };
 
 window.addEventListener('keydown', (event) => {
+  if (missionState.active && !missionState.complete && event.code === 'Enter') {
+    event.preventDefault();
+    submitPlanningMissionAnswer();
+    return;
+  }
+
   if (event.code === 'Space') {
     event.preventDefault();
     game.fire();
@@ -213,7 +411,21 @@ document.querySelector('#restartButton').addEventListener('click', () => {
   held.up = false;
   held.down = false;
   syncMovement();
+  closePlanningMission();
   game.restart();
+});
+
+missionElements.confirmButton.addEventListener('click', () => {
+  submitPlanningMissionAnswer();
+});
+
+missionElements.answer.addEventListener('keydown', (event) => {
+  if (event.key !== 'Enter') {
+    return;
+  }
+
+  event.preventDefault();
+  submitPlanningMissionAnswer();
 });
 
 game.start();

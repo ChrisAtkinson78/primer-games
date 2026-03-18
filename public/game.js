@@ -55,6 +55,7 @@ export class MathBlasterGame {
     this.roundRecap = elements.roundRecap;
     this.nextRoundButton = elements.nextRoundButton;
     this.completeLabel = elements.completeLabel;
+    this.onComplete = elements.onComplete;
 
     this.width = this.canvas.width;
     this.height = this.canvas.height;
@@ -92,6 +93,7 @@ export class MathBlasterGame {
     this.hazardPoofs = [];
     this.explainedOperations = new Set();
     this.flashTimeouts = new Map();
+    this.completionNotified = false;
 
     this.resetLevel(0);
   }
@@ -114,6 +116,7 @@ export class MathBlasterGame {
     this.hazards = [];
     this.hazardPoofs = [];
     this.explainedOperations.clear();
+    this.completionNotified = false;
     this.hideHelperCaption();
     this.hideRoundRecap();
     this.resetLevel(0);
@@ -309,6 +312,13 @@ export class MathBlasterGame {
       this.phaseTimer = 1.4;
       this.enemyShip.warp = 1;
       this.messageLabel.textContent = `All worlds complete. ${this.finalMessage}`;
+      if (!this.completionNotified && typeof this.onComplete === 'function') {
+        this.completionNotified = true;
+        this.onComplete({
+          level: this.currentLevel.label,
+          equation: this.finalMessage,
+        });
+      }
     } else {
       this.phase = 'result';
       this.phaseTimer = 0;
