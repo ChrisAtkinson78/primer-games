@@ -57,6 +57,9 @@ export class MathBlasterGame {
     this.completeLabel = elements.completeLabel;
     this.onComplete = elements.onComplete;
     this.levels = Array.isArray(elements.levels) && elements.levels.length > 0 ? elements.levels : DEFAULT_LEVELS;
+    this.briefingAfterLevels = Number.isInteger(elements.briefingAfterLevels) && elements.briefingAfterLevels > 0
+      ? elements.briefingAfterLevels
+      : this.levels.length;
 
     this.width = this.canvas.width;
     this.height = this.canvas.height;
@@ -331,11 +334,17 @@ export class MathBlasterGame {
       return;
     }
 
-    if (this.levelIndex >= this.levels.length - 1) {
+    const completedLevels = this.levelIndex + 1;
+    const reachedEndOfGame = completedLevels >= this.levels.length;
+    const reachedBriefingUnlock = completedLevels >= this.briefingAfterLevels;
+
+    if (reachedEndOfGame || reachedBriefingUnlock) {
       this.phase = 'complete';
       this.phaseTimer = 1.4;
       this.enemyShip.warp = 1;
-      this.messageLabel.textContent = `All worlds complete. ${this.finalMessage}`;
+      this.messageLabel.textContent = reachedEndOfGame
+        ? `All worlds complete. ${this.finalMessage}`
+        : `${this.finalMessage}. Planning Mission unlocked.`;
       if (!this.completionNotified && typeof this.onComplete === 'function') {
         this.completionNotified = true;
         this.onComplete({

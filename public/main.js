@@ -129,6 +129,18 @@ const getConfiguredLevels = () => {
   });
 };
 
+const getConfiguredBriefAfter = () => {
+  const searchParams = new URLSearchParams(window.location.search);
+  const briefAfterParam = searchParams.get('briefAfter');
+  return briefAfterParam === null ? null : parsePositiveInteger(briefAfterParam);
+};
+
+const getConfiguredQuizPerOp = () => {
+  const searchParams = new URLSearchParams(window.location.search);
+  const quizPerOpParam = searchParams.get('quizPerOp');
+  return quizPerOpParam === null ? 3 : parsePositiveInteger(quizPerOpParam) ?? 3;
+};
+
 root.innerHTML = `
   <div class="app-shell">
     <div class="hud">
@@ -389,6 +401,7 @@ const openPlanningMission = () => {
   missionState.questions = createPlanningMissionQuestions({
     ops: configuredOps,
     digits: configuredDigits,
+    perOp: configuredQuizPerOp,
   });
   missionState.index = 0;
   missionState.active = true;
@@ -458,6 +471,8 @@ const submitPlanningMissionAnswer = () => {
 };
 
 const configuredLevels = getConfiguredLevels();
+const configuredBriefAfter = getConfiguredBriefAfter();
+const configuredQuizPerOp = getConfiguredQuizPerOp();
 const configuredOps = configuredLevels ? [...new Set(configuredLevels.map((level) => level.op))] : null;
 const configuredDigits = (() => {
   if (!configuredLevels) return null;
@@ -485,6 +500,7 @@ const game = new MathBlasterGame({
   roundRecap: document.querySelector('#roundRecap'),
   nextRoundButton: document.querySelector('#nextRoundButton'),
   completeLabel: document.querySelector('#completeLabel'),
+  briefingAfterLevels: configuredBriefAfter,
   onComplete: openPlanningMission,
 });
 
