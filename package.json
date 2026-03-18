@@ -1,0 +1,13 @@
+{
+  "name": "primer-games",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node server.mjs",
+    "start": "node server.mjs"
+  },
+  "dependencies": {
+    "express": "^5.2.1"
+  }
+}
