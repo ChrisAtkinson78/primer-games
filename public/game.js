@@ -1,0 +1,360 @@
+const LEVELS = [
+  { min: 1, max: 5, label: 'Level 1: Addition Warmup' },
+  { min: 3, max: 9, label: 'Level 2: Bigger Sums' },
+  { min: 6, max: 12, label: 'Level 3: Final Transfer' },
+];
+
+const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+
+const randomInt = (min, max) => {
+  const span = max - min + 1;
+  return min + Math.floor(Math.random() * span);
+};
+
+export class MathBlasterGame {
+  constructor(elements) {
+    this.canvas = elements.canvas;
+    this.ctx = this.canvas.getContext('2d');
+    this.levelLabel = elements.levelLabel;
+    this.playerLabel = elements.playerLabel;
+    this.enemyLabel = elements.enemyLabel;
+    this.messageLabel = elements.messageLabel;
+
+    this.width = this.canvas.width;
+    this.height = this.canvas.height;
+
+    this.movement = { left: false, right: false };
+    this.playerSpeed = 380;
+    this.playerShip = {
+      x: this.width * 0.2,
+      y: this.height * 0.78,
+      width: 88,
+      height: 50,
+    };
+    this.enemyShip = {
+      x: this.width * 0.78,
+      y: this.height * 0.28,
+      width: 108,
+      height: 58,
+      warp: 0,
+    };
+
+    this.levelIndex = 0;
+    this.bullets = [];
+    this.phase = 'playing';
+    this.phaseTimer = 0;
+    this.resultValue = null;
+    this.finalMessage = '';
+    this.lastTime = 0;
+
+    this.resetLevel(0);
+  }
+
+  start() {
+    this.lastTime = performance.now();
+    requestAnimationFrame((time) => this.frame(time));
+  }
+
+  restart() {
+    this.bullets = [];
+    this.phase = 'playing';
+    this.phaseTimer = 0;
+    this.resultValue = null;
+    this.finalMessage = '';
+    this.enemyShip.warp = 0;
+    this.resetLevel(0);
+  }
+
+  setMovement(nextMovement) {
+    this.movement = nextMovement;
+  }
+
+  fire() {
+    if (this.phase !== 'playing' || this.playerNumber <= 0 || this.bullets.length >= this.playerNumber) {
+      return;
+    }
+
+    const bullet = {
+      x: this.playerShip.x + this.playerShip.width * 0.45,
+      y: this.playerShip.y - this.playerShip.height * 0.6,
+      progress: 0,
+      speed: 1.7,
+      radius: 7,
+    };
+
+    this.bullets.push(bullet);
+    this.updateHud();
+  }
+
+  frame(time) {
+    const deltaSeconds = Math.min((time - this.lastTime) / 1000, 0.033);
+    this.lastTime = time;
+
+    this.update(deltaSeconds);
+    this.render();
+
+    requestAnimationFrame((nextTime) => this.frame(nextTime));
+  }
+
+  update(deltaSeconds) {
+    this.updatePlayer(deltaSeconds);
+    this.updateBullets(deltaSeconds);
+
+    if (this.phase === 'result') {
+      this.phaseTimer += deltaSeconds;
+      this.enemyShip.warp = clamp(this.phaseTimer / 1.4, 0, 1);
+      if (this.phaseTimer >= 1.6) {
+        this.advanceLevel();
+      }
+    }
+  }
+
+  updatePlayer(deltaSeconds) {
+    if (this.phase !== 'playing') {
+      return;
+    }
+
+    let direction = 0;
+    if (this.movement.left) direction -= 1;
+    if (this.movement.right) direction += 1;
+
+    this.playerShip.x += direction * this.playerSpeed * deltaSeconds;
+
+    const minX = 54;
+    const maxX = this.width - this.playerShip.width - 54;
+    this.playerShip.x = clamp(this.playerShip.x, minX, maxX);
+  }
+
+  updateBullets(deltaSeconds) {
+    const activeBullets = [];
+    for (const bullet of this.bullets) {
+      bullet.progress += bullet.speed * deltaSeconds;
+      if (bullet.progress >= 1) {
+        this.resolveHit();
+        continue;
+      }
+      activeBullets.push(bullet);
+    }
+    this.bullets = activeBullets;
+  }
+
+  resolveHit() {
+    if (this.phase !== 'playing' || this.playerNumber <= 0) {
+      return;
+    }
+
+    this.playerNumber -= 1;
+    this.enemyNumber += 1;
+    this.updateHud();
+
+    if (this.playerNumber === 0) {
+      this.phase = 'result';
+      this.phaseTimer = 0;
+      this.resultValue = this.initialPlayerNumber + this.initialEnemyNumber;
+      this.finalMessage = `${this.initialPlayerNumber} + ${this.initialEnemyNumber} = ${this.resultValue}`;
+      this.messageLabel.textContent = this.finalMessage;
+    }
+  }
+
+  advanceLevel() {
+    if (this.levelIndex >= LEVELS.length - 1) {
+      this.phase = 'complete';
+      this.enemyShip.warp = 1;
+      this.messageLabel.textContent = `All levels complete. Final sum: ${this.finalMessage}`;
+      return;
+    }
+
+    this.resetLevel(this.levelIndex + 1);
+  }
+
+  resetLevel(nextLevelIndex) {
+    this.levelIndex = nextLevelIndex;
+    const config = LEVELS[this.levelIndex];
+    this.initialPlayerNumber = randomInt(config.min, config.max);
+    this.initialEnemyNumber = randomInt(config.min, config.max);
+    this.playerNumber = this.initialPlayerNumber;
+    this.enemyNumber = this.initialEnemyNumber;
+    this.bullets = [];
+    this.phase = 'playing';
+    this.phaseTimer = 0;
+    this.resultValue = null;
+    this.finalMessage = '';
+    this.enemyShip.warp = 0;
+    this.playerShip.x = this.width * 0.2;
+    this.messageLabel.textContent = `${config.label}. Fire ${this.playerNumber} shots to add onto the enemy.`;
+    this.updateHud();
+  }
+
+  updateHud() {
+    this.levelLabel.textContent = `${this.levelIndex + 1} / ${LEVELS.length}`;
+    this.playerLabel.textContent = `${this.playerNumber} ship | ${this.playerNumber - this.bullets.length} ready`;
+    this.enemyLabel.textContent = `${this.enemyNumber}`;
+  }
+
+  render() {
+    const ctx = this.ctx;
+    ctx.clearRect(0, 0, this.width, this.height);
+
+    this.drawBackground(ctx);
+    this.drawArena(ctx);
+    this.drawPlayer(ctx);
+    this.drawEnemy(ctx);
+    this.drawBullets(ctx);
+
+    if (this.phase === 'result' || this.phase === 'complete') {
+      this.drawResultOverlay(ctx);
+    }
+  }
+
+  drawBackground(ctx) {
+    const gradient = ctx.createLinearGradient(0, 0, 0, this.height);
+    gradient.addColorStop(0, '#06131f');
+    gradient.addColorStop(0.55, '#0f2741');
+    gradient.addColorStop(1, '#190f29');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, this.width, this.height);
+
+    for (let i = 0; i < 40; i += 1) {
+      const x = (i * 137) % this.width;
+      const y = (i * 83) % this.height;
+      const size = (i % 3) + 1;
+      ctx.globalAlpha = 0.35 + (i % 4) * 0.1;
+      ctx.fillStyle = '#f8fbff';
+      ctx.fillRect(x, y, size, size);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  drawArena(ctx) {
+    ctx.save();
+    ctx.strokeStyle = 'rgba(180, 226, 255, 0.18)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([8, 10]);
+    ctx.strokeRect(28, 28, this.width - 56, this.height - 56);
+    ctx.restore();
+  }
+
+  drawPlayer(ctx) {
+    const ship = this.playerShip;
+
+    ctx.save();
+    ctx.translate(ship.x, ship.y);
+    ctx.fillStyle = '#66d6ff';
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(ship.width * 0.72, -ship.height * 0.4);
+    ctx.lineTo(ship.width, 0);
+    ctx.lineTo(ship.width * 0.72, ship.height * 0.4);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = '#baf4ff';
+    ctx.fillRect(ship.width * 0.16, -10, ship.width * 0.22, 20);
+    ctx.restore();
+
+    this.drawShipNumber(ctx, ship.x + ship.width * 0.32, ship.y + 4, this.playerNumber, '#06131f', '#f6fbff');
+  }
+
+  drawEnemy(ctx) {
+    const ship = this.enemyShip;
+    const warpScale = 1 + ship.warp * 0.9;
+    const alpha = 1 - ship.warp * 0.85;
+
+    ctx.save();
+    ctx.translate(ship.x + ship.width / 2, ship.y);
+    ctx.scale(warpScale, 1 - ship.warp * 0.5);
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = '#ff9275';
+    ctx.beginPath();
+    ctx.moveTo(-ship.width * 0.5, 0);
+    ctx.lineTo(-ship.width * 0.18, -ship.height * 0.5);
+    ctx.lineTo(ship.width * 0.5, -ship.height * 0.18);
+    ctx.lineTo(ship.width * 0.5, ship.height * 0.18);
+    ctx.lineTo(-ship.width * 0.18, ship.height * 0.5);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.strokeStyle = 'rgba(255, 231, 221, 0.9)';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(-ship.width * 0.1, -12, ship.width * 0.22, 24);
+    ctx.restore();
+
+    if (alpha > 0.1) {
+      this.drawShipNumber(
+        ctx,
+        ship.x + ship.width * 0.46,
+        ship.y + 4,
+        this.enemyNumber,
+        '#3c1208',
+        '#fff5ef',
+        alpha,
+      );
+    }
+  }
+
+  drawShipNumber(ctx, x, y, value, panelColor, textColor, alpha = 1) {
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = panelColor;
+    ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.roundRect(x - 28, y - 22, 56, 44, 12);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = textColor;
+    ctx.font = 'bold 26px Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(String(value), x, y + 1);
+    ctx.restore();
+  }
+
+  drawBullets(ctx) {
+    const startX = this.playerShip.x + this.playerShip.width * 0.9;
+    const startY = this.playerShip.y;
+    const endX = this.enemyShip.x + this.enemyShip.width * 0.15;
+    const endY = this.enemyShip.y;
+
+    for (const bullet of this.bullets) {
+      const t = bullet.progress;
+      const arcHeight = 110;
+      const x = startX + (endX - startX) * t;
+      const y = startY + (endY - startY) * t - Math.sin(t * Math.PI) * arcHeight;
+
+      ctx.save();
+      ctx.fillStyle = '#ffe58f';
+      ctx.shadowColor = '#ffd24d';
+      ctx.shadowBlur = 18;
+      ctx.beginPath();
+      ctx.arc(x, y, bullet.radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  drawResultOverlay(ctx) {
+    const resultText = this.finalMessage || (this.resultValue ? String(this.resultValue) : '');
+    if (!resultText) {
+      return;
+    }
+
+    ctx.save();
+    ctx.fillStyle = 'rgba(6, 10, 18, 0.44)';
+    ctx.fillRect(0, 0, this.width, this.height);
+
+    ctx.fillStyle = '#fff8de';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = '700 26px Arial, sans-serif';
+    ctx.fillText('Addition Complete', this.width / 2, this.height * 0.34);
+    ctx.font = '700 54px Arial, sans-serif';
+    ctx.fillText(resultText, this.width / 2, this.height * 0.48);
+
+    if (this.phase === 'complete') {
+      ctx.font = '600 22px Arial, sans-serif';
+      ctx.fillText('Press Restart to play again.', this.width / 2, this.height * 0.62);
+    }
+    ctx.restore();
+  }
+}

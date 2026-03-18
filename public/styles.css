@@ -1,0 +1,152 @@
+:root {
+  color-scheme: dark;
+  --bg-top: #08111a;
+  --bg-bottom: #140d1f;
+  --panel: rgba(9, 18, 30, 0.8);
+  --panel-border: rgba(157, 221, 255, 0.16);
+  --text: #eef6ff;
+  --muted: #9db8cf;
+  --accent: #77dcff;
+  --accent-strong: #ffb261;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: Arial, sans-serif;
+  color: var(--text);
+  background:
+    radial-gradient(circle at top, rgba(87, 167, 255, 0.16), transparent 30%),
+    linear-gradient(180deg, var(--bg-top), var(--bg-bottom));
+}
+
+button {
+  font: inherit;
+}
+
+.app-shell {
+  width: min(1100px, calc(100vw - 24px));
+  margin: 0 auto;
+  padding: 18px 0 28px;
+}
+
+.hud {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
+  gap: 12px;
+  align-items: stretch;
+  margin-bottom: 14px;
+}
+
+.hud__group {
+  padding: 14px 16px;
+  border: 1px solid var(--panel-border);
+  border-radius: 18px;
+  background: var(--panel);
+  backdrop-filter: blur(10px);
+}
+
+.hud__group--wide {
+  min-width: 0;
+}
+
+.hud__label {
+  margin-bottom: 6px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.hud__value {
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.hud__button,
+.control-button {
+  border: 0;
+  border-radius: 18px;
+  color: var(--text);
+  cursor: pointer;
+  background: linear-gradient(180deg, #153655, #0c2238);
+  box-shadow: inset 0 0 0 1px rgba(157, 221, 255, 0.18);
+}
+
+.hud__button {
+  padding: 0 20px;
+  min-width: 110px;
+  font-weight: 700;
+}
+
+.game-frame {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(157, 221, 255, 0.18);
+  border-radius: 28px;
+  background: rgba(8, 16, 26, 0.75);
+  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.28);
+}
+
+#gameCanvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+}
+
+.controls {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.control-button {
+  padding: 14px 16px;
+  font-weight: 700;
+}
+
+.control-button--accent {
+  background: linear-gradient(180deg, #7a3c0e, #3f1f08);
+  box-shadow: inset 0 0 0 1px rgba(255, 209, 155, 0.24);
+}
+
+.hud__button:hover,
+.control-button:hover {
+  filter: brightness(1.08);
+}
+
+.hud__button:active,
+.control-button:active {
+  transform: translateY(1px);
+}
+
+@media (max-width: 820px) {
+  .app-shell {
+    width: min(100vw - 16px, 1100px);
+    padding-top: 10px;
+  }
+
+  .hud {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .hud__button {
+    min-height: 56px;
+  }
+}
+
+@media (max-width: 520px) {
+  .hud {
+    grid-template-columns: 1fr;
+  }
+
+  .controls {
+    grid-template-columns: 1fr;
+  }
+}
