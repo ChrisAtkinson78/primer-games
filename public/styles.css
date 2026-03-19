@@ -29,19 +29,29 @@ button {
 }
 
 .app-shell {
-  width: min(1100px, calc(100vw - 24px));
+  width: min(1320px, calc(100vw - 24px));
   margin: 0 auto;
   padding: 14px 0 24px;
 }
 
-.hud {
+.game-layout {
   display: grid;
-  grid-template-columns: minmax(170px, 0.95fr) repeat(3, minmax(0, 1fr)) minmax(180px, 1.2fr) auto auto;
-  gap: 9px;
-  align-items: stretch;
-  margin-bottom: 10px;
+  grid-template-columns: minmax(0, 1.5fr) minmax(320px, 0.82fr);
+  grid-template-areas:
+    "arena problem"
+    "arena hud";
+  gap: 12px;
+  align-items: start;
 }
 
+.problem-card,
+.arena-pane,
+.hud {
+  min-width: 0;
+}
+
+.problem-card,
+.hud,
 .hud__group {
   padding: 10px 12px;
   border: 1px solid var(--panel-border);
@@ -50,12 +60,32 @@ button {
   backdrop-filter: blur(10px);
 }
 
-.hud__group--wide {
-  min-width: 0;
+.problem-card {
+  grid-area: problem;
+  padding: 14px 16px;
 }
 
-.hud__group--problem {
-  align-self: start;
+.arena-pane {
+  grid-area: arena;
+}
+
+.hud {
+  grid-area: hud;
+  padding: 14px 16px 16px;
+}
+
+.hud__stack {
+  display: grid;
+  gap: 10px;
+}
+
+.hud__group {
+  padding: 10px 12px;
+}
+
+.hud__group--mission,
+.hud__group--controls {
+  min-width: 0;
 }
 
 .hud__label {
@@ -64,6 +94,10 @@ button {
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--muted);
+}
+
+.hud__label--pane {
+  margin-bottom: 10px;
 }
 
 .hud__value {
@@ -123,14 +157,15 @@ button {
 
 .hud__actions {
   display: grid;
-  gap: 6px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
   align-content: stretch;
 }
 
 .hud__complete {
   display: grid;
   place-items: center;
-  min-height: 42px;
+  min-height: 46px;
   padding: 6px 12px;
   border: 1px solid rgba(255, 209, 155, 0.3);
   border-radius: 16px;
@@ -153,8 +188,8 @@ button {
 }
 
 .hud__button {
+  width: 100%;
   padding: 0 16px;
-  min-width: 96px;
   min-height: 46px;
   font-size: 14px;
   font-weight: 700;
@@ -170,6 +205,7 @@ button {
 .game-frame {
   position: relative;
   overflow: hidden;
+  margin-top: 8px;
   border: 1px solid rgba(157, 221, 255, 0.18);
   border-radius: 28px;
   background: rgba(8, 16, 26, 0.75);
@@ -180,23 +216,23 @@ button {
   display: block;
   width: 100%;
   /* Fit-to-viewport behavior: keep arena visible without scrolling.
-     - Cap height based on viewport height minus HUD/controls overhead.
+     - Cap height based on viewport height minus problem/HUD overhead.
      - Preserve the 16:9 aspect ratio.
   */
   height: auto;
-  max-height: calc(100vh - 210px);
+  max-height: calc(100vh - 56px);
   aspect-ratio: 16 / 9;
 }
 
 @media (max-height: 820px) {
   #gameCanvas {
-    max-height: calc(100vh - 180px);
+    max-height: calc(100vh - 40px);
   }
 }
 
 @media (max-height: 720px) {
   #gameCanvas {
-    max-height: calc(100vh - 160px);
+    max-height: calc(100vh - 24px);
   }
 }
 
@@ -212,13 +248,14 @@ button {
 
 /* Controls rendered inside the left HUD pane (keeps arena as the focus). */
 .controls--pane {
-  margin-top: 10px;
+  margin-top: 6px;
   gap: 8px;
 }
 
 .control-button {
-  padding: 8px 10px;
-  font-size: 12px;
+  min-height: 34px;
+  padding: 7px 10px;
+  font-size: 11px;
   font-weight: 700;
   border-radius: 14px;
 }
@@ -370,12 +407,25 @@ button {
 
 @media (max-width: 820px) {
   .app-shell {
-    width: min(100vw - 16px, 1100px);
+    width: min(100vw - 16px, 1320px);
     padding-top: 10px;
   }
 
+  .game-layout {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "problem"
+      "arena"
+      "hud";
+    gap: 10px;
+  }
+
+  .problem-card,
   .hud {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 12px 14px;
+  }
+
+  .hud__stack {
     gap: 8px;
   }
 
@@ -391,22 +441,28 @@ button {
     font-size: 22px;
   }
 
-  .hud__actions,
-  .hud > .hud__button {
-    grid-column: span 2;
+  .hud__actions {
+    grid-template-columns: 1fr;
   }
 }
 
 @media (max-width: 520px) {
   .app-shell {
-    width: min(100vw - 12px, 1100px);
+    width: min(100vw - 12px, 1320px);
     padding: 8px 0 16px;
   }
 
-  .hud {
-    grid-template-columns: 1fr;
+  .game-layout {
     gap: 7px;
-    margin-bottom: 8px;
+  }
+
+  .problem-card,
+  .hud {
+    padding: 12px;
+  }
+
+  .game-frame {
+    margin-top: 6px;
   }
 
   .hud__group {
@@ -439,9 +495,8 @@ button {
     font-size: 12px;
   }
 
-  .hud__actions,
-  .hud > .hud__button {
-    grid-column: auto;
+  .hud__actions {
+    grid-template-columns: 1fr;
   }
 
   .hud__button,
@@ -454,11 +509,10 @@ button {
   }
 
   .controls {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     grid-template-areas:
-      "up fire"
-      "left right"
-      "down down";
+      ". up fire"
+      "left down right";
     gap: 8px;
   }
 

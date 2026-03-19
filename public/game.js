@@ -1208,7 +1208,7 @@ export class MathBlasterGame {
 
   drawShipBody(ctx, ship, config) {
     ctx.save();
-    ctx.translate(config.centered ? ship.x + ship.width * 0.5 : ship.x + ship.width * 0.5, ship.y);
+    ctx.translate(ship.x + ship.width * 0.5, ship.y);
     this.drawThruster(
       ctx,
       -ship.width * 0.44,
@@ -1285,7 +1285,6 @@ export class MathBlasterGame {
     ctx.restore();
 
     this.drawShipBody(ctx, ship, {
-      centered: true,
       profile: 'player',
       thrusterPower: this.getPlayerThrusterPower(),
       thrusterColors: {

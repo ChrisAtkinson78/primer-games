@@ -143,9 +143,9 @@ const getConfiguredQuizPerOp = () => {
 
 root.innerHTML = `
   <div class="app-shell">
-    <div class="hud">
-      <div class="hud__group hud__group--problem">
-        <div class="hud__label">Problem</div>
+    <div class="game-layout">
+      <section class="problem-card" aria-labelledby="problemPanelLabel">
+        <div id="problemPanelLabel" class="hud__label">Problem</div>
         <div class="problem-panel" aria-live="polite">
           <div class="problem-panel__line">
             <span class="problem-panel__operator" aria-hidden="true"></span>
@@ -160,44 +160,54 @@ root.innerHTML = `
             <span id="problemBottom" class="problem-panel__value">?</span>
           </div>
         </div>
-        <div id="roundRecap" class="hud__note hud__note--recap" hidden></div>
+      </section>
 
-        <div class="controls controls--pane" aria-label="Controls">
-          <button id="upButton" class="control-button" type="button">Up</button>
-          <button id="fireButton" class="control-button control-button--accent controls__fire" type="button">Teleport</button>
-          <button id="leftButton" class="control-button" type="button">Left</button>
-          <button id="rightButton" class="control-button" type="button">Right</button>
-          <button id="downButton" class="control-button" type="button">Down</button>
+      <section class="arena-pane" aria-labelledby="arenaLabel">
+        <div id="arenaLabel" class="hud__label">Arena</div>
+        <div class="game-frame">
+          <canvas id="gameCanvas" width="960" height="540" aria-label="Math space game"></canvas>
         </div>
-      </div>
-      <div class="hud__group">
-        <div class="hud__label">Level</div>
-        <div id="levelLabel" class="hud__value">1 / 12</div>
-      </div>
-      <div class="hud__group">
-        <div class="hud__label">Player Status</div>
-        <div id="playerLabel" class="hud__value">0</div>
-      </div>
-      <div class="hud__group">
-        <div class="hud__label">Target Status</div>
-        <div id="enemyLabel" class="hud__value">0</div>
-      </div>
-      <div class="hud__group hud__group--wide">
-        <div class="hud__label">Mission</div>
-        <div id="messageLabel" class="hud__value">Press Teleport to send people to safety.</div>
-        <div id="helperCaption" class="hud__note" hidden></div>
-      </div>
-      <div class="hud__actions">
-        <button id="nextRoundButton" class="hud__button" type="button" hidden>Next Round</button>
-        <div id="completeLabel" class="hud__complete" hidden>Complete</div>
-      </div>
-      <button id="restartButton" class="hud__button" type="button">Restart</button>
-    </div>
+      </section>
 
-    <div class="game-frame">
-      <canvas id="gameCanvas" width="960" height="540" aria-label="Math space game"></canvas>
+      <section class="hud" aria-labelledby="missionHudLabel">
+        <div id="missionHudLabel" class="hud__label hud__label--pane">Mission HUD</div>
+        <div class="hud__stack">
+          <div class="hud__group">
+            <div class="hud__label">Level</div>
+            <div id="levelLabel" class="hud__value">1 / 12</div>
+          </div>
+          <div class="hud__group">
+            <div class="hud__label">Player Status</div>
+            <div id="playerLabel" class="hud__value">0</div>
+          </div>
+          <div class="hud__group">
+            <div class="hud__label">Target Status</div>
+            <div id="enemyLabel" class="hud__value">0</div>
+          </div>
+          <div class="hud__group hud__group--mission">
+            <div class="hud__label">Mission</div>
+            <div id="messageLabel" class="hud__value">Press Teleport to send people to safety.</div>
+            <div id="helperCaption" class="hud__note" hidden></div>
+            <div id="roundRecap" class="hud__note hud__note--recap" hidden></div>
+          </div>
+          <div class="hud__actions">
+            <button id="nextRoundButton" class="hud__button" type="button" hidden>Next Round</button>
+            <div id="completeLabel" class="hud__complete" hidden>Complete</div>
+            <button id="restartButton" class="hud__button" type="button">Restart</button>
+          </div>
+          <div class="hud__group hud__group--controls">
+            <div class="hud__label">Controls</div>
+            <div class="controls controls--pane" aria-label="Controls">
+              <button id="upButton" class="control-button" type="button">Up</button>
+              <button id="fireButton" class="control-button control-button--accent controls__fire" type="button">Teleport</button>
+              <button id="leftButton" class="control-button" type="button">Left</button>
+              <button id="rightButton" class="control-button" type="button">Right</button>
+              <button id="downButton" class="control-button" type="button">Down</button>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
-
 
     <div id="planningMissionModal" class="mission-modal" hidden>
       <div class="mission-modal__backdrop"></div>
