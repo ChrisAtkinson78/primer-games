@@ -117,9 +117,10 @@ button {
 
 .problem-panel__line {
   display: grid;
-  grid-template-columns: 18px minmax(0, 1fr);
+  /* Keep operator close to the numbers like a real stacked equation */
+  grid-template-columns: 14px minmax(0, 1fr);
   align-items: baseline;
-  column-gap: 8px;
+  column-gap: 4px;
   white-space: nowrap;
 }
 
@@ -135,7 +136,7 @@ button {
 
 .problem-panel__operator {
   text-align: right;
-  width: 18px;
+  width: 14px;
   color: var(--muted);
 }
 
@@ -493,8 +494,8 @@ button {
   }
 
   .problem-panel__line {
-    grid-template-columns: 16px minmax(0, 1fr);
-    column-gap: 7px;
+    grid-template-columns: 12px minmax(0, 1fr);
+    column-gap: 4px;
   }
 
   .hud__note {
