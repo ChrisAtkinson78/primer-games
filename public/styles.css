@@ -179,8 +179,25 @@ button {
 #gameCanvas {
   display: block;
   width: 100%;
+  /* Fit-to-viewport behavior: keep arena visible without scrolling.
+     - Cap height based on viewport height minus HUD/controls overhead.
+     - Preserve the 16:9 aspect ratio.
+  */
   height: auto;
+  max-height: calc(100vh - 210px);
   aspect-ratio: 16 / 9;
+}
+
+@media (max-height: 820px) {
+  #gameCanvas {
+    max-height: calc(100vh - 180px);
+  }
+}
+
+@media (max-height: 720px) {
+  #gameCanvas {
+    max-height: calc(100vh - 160px);
+  }
 }
 
 .controls {
