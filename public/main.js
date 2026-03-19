@@ -144,6 +144,13 @@ const getConfiguredQuizPerOp = () => {
 root.innerHTML = `
   <div class="app-shell">
     <div class="game-layout">
+      <section class="arena-pane" aria-labelledby="arenaLabel">
+        <div id="arenaLabel" class="hud__label">Arena</div>
+        <div class="game-frame">
+          <canvas id="gameCanvas" width="960" height="540" aria-label="Math space game"></canvas>
+        </div>
+      </section>
+
       <section class="problem-card" aria-labelledby="problemPanelLabel">
         <div id="problemPanelLabel" class="hud__label">Problem</div>
         <div class="problem-panel" aria-live="polite">
@@ -159,13 +166,6 @@ root.innerHTML = `
             <span id="problemOpBottom" class="problem-panel__operator" aria-hidden="true">=</span>
             <span id="problemBottom" class="problem-panel__value">?</span>
           </div>
-        </div>
-      </section>
-
-      <section class="arena-pane" aria-labelledby="arenaLabel">
-        <div id="arenaLabel" class="hud__label">Arena</div>
-        <div class="game-frame">
-          <canvas id="gameCanvas" width="960" height="540" aria-label="Math space game"></canvas>
         </div>
       </section>
 
