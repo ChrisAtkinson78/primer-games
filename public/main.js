@@ -161,6 +161,14 @@ root.innerHTML = `
           </div>
         </div>
         <div id="roundRecap" class="hud__note hud__note--recap" hidden></div>
+
+        <div class="controls controls--pane" aria-label="Controls">
+          <button id="upButton" class="control-button" type="button">Up</button>
+          <button id="fireButton" class="control-button control-button--accent controls__fire" type="button">Teleport</button>
+          <button id="leftButton" class="control-button" type="button">Left</button>
+          <button id="rightButton" class="control-button" type="button">Right</button>
+          <button id="downButton" class="control-button" type="button">Down</button>
+        </div>
       </div>
       <div class="hud__group">
         <div class="hud__label">Level</div>
@@ -190,13 +198,6 @@ root.innerHTML = `
       <canvas id="gameCanvas" width="960" height="540" aria-label="Math space game"></canvas>
     </div>
 
-    <div class="controls" aria-label="Touch controls">
-      <button id="upButton" class="control-button" type="button">Move Up</button>
-      <button id="fireButton" class="control-button control-button--accent controls__fire" type="button">Teleport</button>
-      <button id="leftButton" class="control-button" type="button">Move Left</button>
-      <button id="rightButton" class="control-button" type="button">Move Right</button>
-      <button id="downButton" class="control-button" type="button">Move Down</button>
-    </div>
 
     <div id="planningMissionModal" class="mission-modal" hidden>
       <div class="mission-modal__backdrop"></div>

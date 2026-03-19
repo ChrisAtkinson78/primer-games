@@ -210,10 +210,17 @@ button {
   margin-top: 10px;
 }
 
+/* Controls rendered inside the left HUD pane (keeps arena as the focus). */
+.controls--pane {
+  margin-top: 10px;
+  gap: 8px;
+}
+
 .control-button {
-  padding: 11px 14px;
-  font-size: 14px;
+  padding: 8px 10px;
+  font-size: 12px;
   font-weight: 700;
+  border-radius: 14px;
 }
 
 .control-button--accent {
@@ -452,6 +459,10 @@ button {
       "up fire"
       "left right"
       "down down";
+    gap: 8px;
+  }
+
+  .controls--pane {
     gap: 8px;
   }
 
