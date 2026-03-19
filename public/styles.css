@@ -31,21 +31,21 @@ button {
 .app-shell {
   width: min(1100px, calc(100vw - 24px));
   margin: 0 auto;
-  padding: 18px 0 28px;
+  padding: 14px 0 24px;
 }
 
 .hud {
   display: grid;
   grid-template-columns: minmax(170px, 0.95fr) repeat(3, minmax(0, 1fr)) minmax(180px, 1.2fr) auto auto;
-  gap: 12px;
+  gap: 9px;
   align-items: stretch;
-  margin-bottom: 14px;
+  margin-bottom: 10px;
 }
 
 .hud__group {
-  padding: 14px 16px;
+  padding: 10px 12px;
   border: 1px solid var(--panel-border);
-  border-radius: 18px;
+  border-radius: 16px;
   background: var(--panel);
   backdrop-filter: blur(10px);
 }
@@ -59,22 +59,23 @@ button {
 }
 
 .hud__label {
-  margin-bottom: 6px;
-  font-size: 12px;
+  margin-bottom: 4px;
+  font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--muted);
 }
 
 .hud__value {
-  font-size: 22px;
+  font-size: 18px;
   font-weight: 700;
+  line-height: 1.25;
 }
 
 .problem-panel {
   display: grid;
-  gap: 6px;
-  font-size: 28px;
+  gap: 4px;
+  font-size: 24px;
   font-weight: 700;
   line-height: 1.1;
   font-variant-numeric: tabular-nums;
@@ -82,9 +83,9 @@ button {
 
 .problem-panel__line {
   display: grid;
-  grid-template-columns: 20px minmax(0, 1fr);
+  grid-template-columns: 18px minmax(0, 1fr);
   align-items: baseline;
-  column-gap: 10px;
+  column-gap: 8px;
   white-space: nowrap;
 }
 
@@ -104,13 +105,13 @@ button {
 }
 
 .hud__note {
-  margin-top: 10px;
-  padding: 10px 12px;
+  margin-top: 8px;
+  padding: 8px 10px;
   border: 1px solid rgba(157, 221, 255, 0.14);
-  border-radius: 14px;
+  border-radius: 12px;
   background: rgba(8, 18, 28, 0.56);
   color: var(--text);
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1.35;
 }
 
@@ -122,20 +123,20 @@ button {
 
 .hud__actions {
   display: grid;
-  gap: 8px;
+  gap: 6px;
   align-content: stretch;
 }
 
 .hud__complete {
   display: grid;
   place-items: center;
-  min-height: 48px;
-  padding: 8px 14px;
+  min-height: 42px;
+  padding: 6px 12px;
   border: 1px solid rgba(255, 209, 155, 0.3);
-  border-radius: 18px;
+  border-radius: 16px;
   background: rgba(91, 50, 17, 0.52);
   color: #ffe6c8;
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -152,9 +153,10 @@ button {
 }
 
 .hud__button {
-  padding: 0 20px;
-  min-width: 110px;
-  min-height: 56px;
+  padding: 0 16px;
+  min-width: 96px;
+  min-height: 46px;
+  font-size: 14px;
   font-weight: 700;
 }
 
@@ -187,12 +189,13 @@ button {
   grid-template-areas:
     ". up fire"
     "left down right";
-  gap: 12px;
-  margin-top: 14px;
+  gap: 10px;
+  margin-top: 10px;
 }
 
 .control-button {
-  padding: 14px 16px;
+  padding: 11px 14px;
+  font-size: 14px;
   font-weight: 700;
 }
 
@@ -349,6 +352,19 @@ button {
 
   .hud {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .hud__group {
+    padding: 10px 11px;
+  }
+
+  .hud__value {
+    font-size: 17px;
+  }
+
+  .problem-panel {
+    font-size: 22px;
   }
 
   .hud__actions,
@@ -358,13 +374,59 @@ button {
 }
 
 @media (max-width: 520px) {
+  .app-shell {
+    width: min(100vw - 12px, 1100px);
+    padding: 8px 0 16px;
+  }
+
   .hud {
     grid-template-columns: 1fr;
+    gap: 7px;
+    margin-bottom: 8px;
+  }
+
+  .hud__group {
+    padding: 10px;
+  }
+
+  .hud__label {
+    font-size: 10px;
+  }
+
+  .hud__value {
+    font-size: 16px;
+  }
+
+  .problem-panel {
+    font-size: 21px;
+  }
+
+  .problem-panel__line {
+    grid-template-columns: 16px minmax(0, 1fr);
+    column-gap: 7px;
+  }
+
+  .hud__note {
+    font-size: 12px;
+  }
+
+  .hud__complete {
+    min-height: 40px;
+    font-size: 12px;
   }
 
   .hud__actions,
   .hud > .hud__button {
     grid-column: auto;
+  }
+
+  .hud__button,
+  .control-button {
+    font-size: 13px;
+  }
+
+  .hud__button {
+    min-height: 44px;
   }
 
   .controls {
@@ -373,6 +435,7 @@ button {
       "up fire"
       "left right"
       "down down";
+    gap: 8px;
   }
 
   .mission-modal {
