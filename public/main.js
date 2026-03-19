@@ -158,11 +158,11 @@ root.innerHTML = `
             <span class="problem-panel__operator" aria-hidden="true"></span>
             <span id="problemTop" class="problem-panel__value">0</span>
           </div>
-          <div class="problem-panel__line">
+          <div class="problem-panel__line problem-panel__line--middle">
             <span id="problemOpMiddle" class="problem-panel__operator" aria-hidden="true">+</span>
             <span id="problemMiddle" class="problem-panel__value">0</span>
           </div>
-          <div class="problem-panel__line">
+          <div class="problem-panel__line problem-panel__line--bottom">
             <span id="problemOpBottom" class="problem-panel__operator" aria-hidden="true">=</span>
             <span id="problemBottom" class="problem-panel__value">?</span>
           </div>

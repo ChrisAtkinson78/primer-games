@@ -123,8 +123,19 @@ button {
   white-space: nowrap;
 }
 
+/* Make it feel like a real vertical math problem: underline under the 2nd operand. */
+.problem-panel__line--middle {
+  padding-bottom: 6px;
+  border-bottom: 2px solid rgba(238, 246, 255, 0.35);
+}
+
+.problem-panel__value {
+  text-align: right;
+}
+
 .problem-panel__operator {
-  text-align: center;
+  text-align: right;
+  width: 18px;
   color: var(--muted);
 }
 
