@@ -1060,6 +1060,187 @@ export class MathBlasterGame {
     }
   }
 
+  getPlayerThrusterPower() {
+    const movementAmount = Number(this.movement.left)
+      + Number(this.movement.right)
+      + Number(this.movement.up)
+      + Number(this.movement.down);
+    return movementAmount > 0 ? 1 : 0.35;
+  }
+
+  getEnemyThrusterPower() {
+    if (this.phase !== 'playing') {
+      return 0.28;
+    }
+
+    const targetX = this.playerShip.x + this.playerShip.width * 0.5 - this.enemyShip.width * 0.5;
+    const targetY = this.playerShip.y;
+    const distance = Math.hypot(targetX - this.enemyShip.x, targetY - this.enemyShip.y);
+    return clamp(distance / 140, 0.35, 1);
+  }
+
+  traceShipHull(ctx, width, height, profile = 'player') {
+    const halfHeight = height * 0.5;
+    ctx.beginPath();
+    if (profile === 'enemy') {
+      ctx.moveTo(-width * 0.5, 0);
+      ctx.quadraticCurveTo(-width * 0.3, -halfHeight * 1.08, width * 0.08, -halfHeight * 0.94);
+      ctx.lineTo(width * 0.3, -halfHeight * 0.6);
+      ctx.quadraticCurveTo(width * 0.53, -halfHeight * 0.24, width * 0.5, 0);
+      ctx.quadraticCurveTo(width * 0.53, halfHeight * 0.24, width * 0.3, halfHeight * 0.6);
+      ctx.lineTo(width * 0.08, halfHeight * 0.94);
+      ctx.quadraticCurveTo(-width * 0.3, halfHeight * 1.08, -width * 0.5, 0);
+    } else {
+      ctx.moveTo(-width * 0.5, 0);
+      ctx.quadraticCurveTo(-width * 0.26, -halfHeight * 1.04, width * 0.18, -halfHeight * 0.82);
+      ctx.lineTo(width * 0.42, -halfHeight * 0.5);
+      ctx.quadraticCurveTo(width * 0.62, -halfHeight * 0.15, width * 0.5, 0);
+      ctx.quadraticCurveTo(width * 0.62, halfHeight * 0.15, width * 0.42, halfHeight * 0.5);
+      ctx.lineTo(width * 0.18, halfHeight * 0.82);
+      ctx.quadraticCurveTo(-width * 0.26, halfHeight * 1.04, -width * 0.5, 0);
+    }
+    ctx.closePath();
+  }
+
+  drawHull(ctx, width, height, palette, profile = 'player') {
+    const halfWidth = width * 0.5;
+    const halfHeight = height * 0.5;
+
+    this.traceShipHull(ctx, width, height, profile);
+    const hullGradient = ctx.createLinearGradient(-halfWidth, -halfHeight, halfWidth, halfHeight);
+    hullGradient.addColorStop(0, palette.hullLight);
+    hullGradient.addColorStop(0.55, palette.hullMid);
+    hullGradient.addColorStop(1, palette.hullDark);
+    ctx.fillStyle = hullGradient;
+    ctx.fill();
+
+    this.traceShipHull(ctx, width * 0.76, height * 0.56, profile);
+    const plateGradient = ctx.createLinearGradient(-width * 0.28, -halfHeight * 0.4, width * 0.3, halfHeight * 0.5);
+    plateGradient.addColorStop(0, palette.panelLight);
+    plateGradient.addColorStop(1, palette.panelDark);
+    ctx.fillStyle = plateGradient;
+    ctx.fill();
+
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
+    ctx.beginPath();
+    ctx.moveTo(-width * 0.22, -halfHeight * 0.5);
+    ctx.quadraticCurveTo(width * 0.06, -halfHeight * 0.86, width * 0.32, -halfHeight * 0.34);
+    ctx.quadraticCurveTo(width * 0.08, -halfHeight * 0.24, -width * 0.18, -halfHeight * 0.1);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = 'rgba(9, 18, 29, 0.18)';
+    ctx.beginPath();
+    ctx.moveTo(-width * 0.12, halfHeight * 0.1);
+    ctx.quadraticCurveTo(width * 0.18, halfHeight * 0.45, width * 0.36, halfHeight * 0.34);
+    ctx.quadraticCurveTo(width * 0.05, halfHeight * 0.72, -width * 0.18, halfHeight * 0.54);
+    ctx.closePath();
+    ctx.fill();
+
+    this.traceShipHull(ctx, width, height, profile);
+    ctx.strokeStyle = palette.outline;
+    ctx.lineWidth = 1.4;
+    ctx.stroke();
+  }
+
+  drawCockpit(ctx, width, height, palette, profile = 'player') {
+    const canopyX = profile === 'enemy' ? width * 0.08 : width * 0.04;
+    const canopyY = -height * 0.23;
+    const canopyWidth = width * 0.18;
+    const canopyHeight = height * 0.22;
+    const canopyGradient = ctx.createLinearGradient(
+      canopyX - canopyWidth * 0.5,
+      canopyY - canopyHeight,
+      canopyX + canopyWidth * 0.5,
+      canopyY + canopyHeight,
+    );
+    canopyGradient.addColorStop(0, palette.canopyLight);
+    canopyGradient.addColorStop(1, palette.canopyDark);
+
+    ctx.fillStyle = canopyGradient;
+    ctx.beginPath();
+    ctx.ellipse(canopyX, canopyY, canopyWidth * 0.5, canopyHeight * 0.6, -0.16, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = 'rgba(225, 243, 255, 0.42)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.22)';
+    ctx.beginPath();
+    ctx.ellipse(canopyX - canopyWidth * 0.12, canopyY - canopyHeight * 0.1, canopyWidth * 0.14, canopyHeight * 0.18, -0.16, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  drawThruster(ctx, x, y, length, radius, power, colors) {
+    const outerLength = length * (0.7 + power * 0.55);
+    const outerRadius = radius * (0.8 + power * 0.45);
+    const innerLength = outerLength * 0.62;
+    const innerRadius = outerRadius * 0.48;
+    const glowGradient = ctx.createLinearGradient(x, y, x - outerLength, y);
+    glowGradient.addColorStop(0, colors.hot);
+    glowGradient.addColorStop(0.42, colors.warm);
+    glowGradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.fillStyle = glowGradient;
+    ctx.beginPath();
+    ctx.moveTo(x, y - outerRadius);
+    ctx.quadraticCurveTo(x - outerLength * 0.32, y - outerRadius * 0.34, x - outerLength, y);
+    ctx.quadraticCurveTo(x - outerLength * 0.32, y + outerRadius * 0.34, x, y + outerRadius);
+    ctx.closePath();
+    ctx.fill();
+
+    const coreGradient = ctx.createLinearGradient(x, y, x - innerLength, y);
+    coreGradient.addColorStop(0, 'rgba(255, 247, 234, 0.96)');
+    coreGradient.addColorStop(0.35, colors.core);
+    coreGradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = coreGradient;
+    ctx.beginPath();
+    ctx.moveTo(x, y - innerRadius);
+    ctx.quadraticCurveTo(x - innerLength * 0.26, y - innerRadius * 0.3, x - innerLength, y);
+    ctx.quadraticCurveTo(x - innerLength * 0.26, y + innerRadius * 0.3, x, y + innerRadius);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
+  drawShipBody(ctx, ship, config) {
+    ctx.save();
+    ctx.translate(config.centered ? ship.x + ship.width * 0.5 : ship.x + ship.width * 0.5, ship.y);
+    this.drawThruster(
+      ctx,
+      -ship.width * 0.44,
+      0,
+      ship.width * 0.2,
+      ship.height * 0.12,
+      config.thrusterPower,
+      config.thrusterColors,
+    );
+    this.drawThruster(
+      ctx,
+      -ship.width * 0.33,
+      ship.height * 0.16,
+      ship.width * 0.14,
+      ship.height * 0.08,
+      config.thrusterPower * 0.85,
+      config.thrusterColors,
+    );
+    this.drawThruster(
+      ctx,
+      -ship.width * 0.33,
+      -ship.height * 0.16,
+      ship.width * 0.14,
+      ship.height * 0.08,
+      config.thrusterPower * 0.85,
+      config.thrusterColors,
+    );
+    this.drawHull(ctx, ship.width, ship.height, config.palette, config.profile);
+    this.drawCockpit(ctx, ship.width, ship.height, config.palette, config.profile);
+    ctx.restore();
+  }
+
   drawPlayer(ctx) {
     const ship = this.playerShip;
     const damageRatio = this.initialPlayerNumber > 0 ? 1 - this.playerNumber / this.initialPlayerNumber : 0;
@@ -1101,22 +1282,28 @@ export class MathBlasterGame {
         ctx.fillRect(baseX - 1, baseY - flameHeight * 0.65, 4, flameHeight * 0.62);
       }
     }
-
-    ctx.fillStyle = '#66d6ff';
-    ctx.beginPath();
-    ctx.moveTo(0, 0);
-    ctx.lineTo(ship.width * 0.72, -ship.height * 0.4);
-    ctx.lineTo(ship.width, 0);
-    ctx.lineTo(ship.width * 0.72, ship.height * 0.4);
-    ctx.closePath();
-    ctx.fill();
-
-    ctx.fillStyle = '#baf4ff';
-    ctx.fillRect(ship.width * 0.16, -10, ship.width * 0.22, 20);
-
-    ctx.fillStyle = 'rgba(27, 56, 74, 0.55)';
-    ctx.fillRect(ship.width * 0.08, -6, ship.width * 0.14, 12);
     ctx.restore();
+
+    this.drawShipBody(ctx, ship, {
+      centered: true,
+      profile: 'player',
+      thrusterPower: this.getPlayerThrusterPower(),
+      thrusterColors: {
+        hot: 'rgba(255, 170, 76, 0.72)',
+        warm: 'rgba(82, 191, 255, 0.42)',
+        core: 'rgba(120, 226, 255, 0.85)',
+      },
+      palette: {
+        hullLight: '#a3eaff',
+        hullMid: '#54c6ee',
+        hullDark: '#0e5777',
+        panelLight: 'rgba(221, 248, 255, 0.7)',
+        panelDark: 'rgba(12, 81, 109, 0.52)',
+        canopyLight: 'rgba(220, 247, 255, 0.9)',
+        canopyDark: 'rgba(42, 98, 124, 0.92)',
+        outline: 'rgba(232, 248, 255, 0.32)',
+      },
+    });
 
     this.drawShipNumber(ctx, ship.x + ship.width * 0.32, ship.y + 4, this.playerNumber, '#06131f', '#f6fbff');
   }
@@ -1130,19 +1317,33 @@ export class MathBlasterGame {
     ctx.translate(ship.x + ship.width / 2, ship.y);
     ctx.scale(warpScale, 1 - ship.warp * 0.5);
     ctx.globalAlpha = alpha;
-    ctx.fillStyle = '#ff9275';
-    ctx.beginPath();
-    ctx.moveTo(-ship.width * 0.5, 0);
-    ctx.lineTo(-ship.width * 0.18, -ship.height * 0.5);
-    ctx.lineTo(ship.width * 0.5, -ship.height * 0.18);
-    ctx.lineTo(ship.width * 0.5, ship.height * 0.18);
-    ctx.lineTo(-ship.width * 0.18, ship.height * 0.5);
-    ctx.closePath();
-    ctx.fill();
-
-    ctx.strokeStyle = 'rgba(255, 231, 221, 0.9)';
-    ctx.lineWidth = 3;
-    ctx.strokeRect(-ship.width * 0.1, -12, ship.width * 0.22, 24);
+    this.drawThruster(
+      ctx,
+      -ship.width * 0.44,
+      0,
+      ship.width * 0.2,
+      ship.height * 0.13,
+      this.getEnemyThrusterPower(),
+      {
+        hot: 'rgba(255, 176, 92, 0.68)',
+        warm: 'rgba(112, 195, 255, 0.38)',
+        core: 'rgba(131, 220, 255, 0.8)',
+      },
+    );
+    this.drawHull(ctx, ship.width, ship.height, {
+      hullLight: '#ffd9c8',
+      hullMid: '#ff8d73',
+      hullDark: '#8a3e30',
+      panelLight: 'rgba(255, 231, 224, 0.62)',
+      panelDark: 'rgba(125, 47, 35, 0.5)',
+      canopyLight: 'rgba(255, 246, 236, 0.88)',
+      canopyDark: 'rgba(97, 52, 43, 0.92)',
+      outline: 'rgba(255, 239, 233, 0.34)',
+    }, 'enemy');
+    this.drawCockpit(ctx, ship.width, ship.height, {
+      canopyLight: 'rgba(255, 246, 236, 0.88)',
+      canopyDark: 'rgba(97, 52, 43, 0.92)',
+    }, 'enemy');
     ctx.restore();
 
     if (alpha > 0.1) {
@@ -1161,15 +1362,21 @@ export class MathBlasterGame {
   drawShipNumber(ctx, x, y, value, panelColor, textColor, alpha = 1) {
     ctx.save();
     ctx.globalAlpha = alpha;
-    ctx.fillStyle = panelColor;
-    ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+    const plateGradient = ctx.createLinearGradient(x - 28, y - 18, x + 28, y + 18);
+    plateGradient.addColorStop(0, 'rgba(255, 255, 255, 0.18)');
+    plateGradient.addColorStop(0.2, panelColor);
+    plateGradient.addColorStop(1, 'rgba(3, 8, 16, 0.82)');
+    ctx.fillStyle = plateGradient;
+    ctx.strokeStyle = 'rgba(255,255,255,0.2)';
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.roundRect(x - 28, y - 22, 56, 44, 12);
+    ctx.roundRect(x - 26, y - 18, 52, 36, 10);
     ctx.fill();
     ctx.stroke();
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+    ctx.fillRect(x - 18, y - 13, 26, 4);
     ctx.fillStyle = textColor;
-    ctx.font = 'bold 26px Arial, sans-serif';
+    ctx.font = 'bold 24px Arial, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(String(value), x, y + 1);
